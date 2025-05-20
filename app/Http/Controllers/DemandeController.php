@@ -9,8 +9,10 @@ use App\Http\Requests\DemandeStoreRequest;
 use App\Models\Demande;
 use App\Models\FichierJustificatif;
 use App\Services\DemandeMailService;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Throwable;
+use Yajra\DataTables\Facades\DataTables;
 
 
 class DemandeController extends Controller
@@ -80,5 +82,32 @@ class DemandeController extends Controller
         }
     }
 
+    public function index()
+    {
+        return view('demandes.index');
+    }
+
+    public function show(Demande $demande)
+    {
+        return view('demandes.show', compact('demande'));
+    }
+
+
+    public function data(Request $request)
+    {
+        $query = Demande::with('typeDocument', 'etatDemande', 'structure');
+
+        // Vous pouvez filtrer par rôle ici selon les besoins futurs
+
+        return DataTables::of($query)
+            ->addColumn('etat', fn($demande) => $demande->etatDemande->nom)
+            ->addColumn('type', fn($demande) => $demande->typeDocument->nom)
+            ->addColumn('structure', fn($demande) => $demande->structure->nom ?? '-')
+            ->addColumn('actions', function ($demande) {
+                return view('demandes.partials.actions', compact('demande'))->render();
+            })
+            ->rawColumns(['actions'])
+            ->make();
+    }
 
 }

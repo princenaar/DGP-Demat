@@ -18,7 +18,7 @@ return new class extends Migration {
             $table->string('prenom');
             $table->string('email');
             $table->string('telephone')->nullable();
-            $table->enum('statut', ['etatique', 'contractuel']);
+            $table->enum('statut', ['étatique', 'contractuel']);
             $table->string('matricule')->nullable(); // requis si étatique
             $table->string('nin'); // Numéro d'identification nationale
 

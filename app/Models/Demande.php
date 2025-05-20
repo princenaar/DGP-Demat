@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 /**
- * 
+ *
  *
  * @property-read \App\Models\EtatDemande|null $etat
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\HistoriqueEtat> $historiques
@@ -50,7 +50,7 @@ class Demande extends Model
         return $this->belongsTo(Structure::class);
     }
 
-    public function etat()
+    public function etatDemande()
     {
         return $this->belongsTo(EtatDemande::class, 'etat_demande_id');
     }
