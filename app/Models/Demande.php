@@ -64,4 +64,10 @@ class Demande extends Model
     {
         return $this->hasMany(HistoriqueEtat::class);
     }
+
+    public function agent()
+    {
+        return $this->belongsTo(User::class, 'agent_id');
+    }
+
 }

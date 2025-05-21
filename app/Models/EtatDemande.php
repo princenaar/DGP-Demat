@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 /**
- * 
+ *
  *
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Demande> $demandes
  * @property-read int|null $demandes_count
@@ -21,13 +21,14 @@ class EtatDemande extends Model
 {
     use HasFactory;
 
-    public const EN_ATTENTE = 'en_attente';
-    public const RECEPTIONNEE = 'receptionnee';
-    public const VALIDEE = 'validee';
-    public const REFUSEE = 'refusee';
-    public const COMPLEMENTS = 'demande_complements';
-    public const EN_SIGNATURE = 'en_signature';
-    public const SUSPENDUE = 'suspendue';
+    public const EN_ATTENTE = 'EN ATTENTE';
+    public const RECEPTIONNEE = 'RECEPTIONNEE';
+    public const VALIDEE = 'VALIDEE';
+    public const REFUSEE = 'REFUSEE';
+    public const COMPLEMENTS = 'DEMANDE DE COMPLEMENTS';
+    public const EN_SIGNATURE = 'EN SIGNATURE';
+    public const SIGNEE = 'SIGNEE';
+    public const SUSPENDUE = 'SUSPENDUE';
 
     protected $fillable = ['nom'];
 
@@ -49,6 +50,7 @@ class EtatDemande extends Model
             self::VALIDEE => 'Validée',
             self::REFUSEE => 'Refusée',
             self::COMPLEMENTS => 'Demande de compléments',
+            self::SIGNEE => 'Signée',
             self::EN_SIGNATURE => 'En signature',
             self::SUSPENDUE => 'Suspendue',
         ];

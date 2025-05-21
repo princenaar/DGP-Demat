@@ -9,7 +9,6 @@ use Illuminate\Database\Seeder;
 /**
  * Seed the application's database with EtatDemande.
  */
-
 class EtatDemandeSeeder extends Seeder
 {
     /**
@@ -24,6 +23,7 @@ class EtatDemandeSeeder extends Seeder
             EtatDemande::REFUSEE,
             EtatDemande::COMPLEMENTS,
             EtatDemande::EN_SIGNATURE,
+            EtatDemande::SIGNEE,
             EtatDemande::SUSPENDUE,
         ];
 

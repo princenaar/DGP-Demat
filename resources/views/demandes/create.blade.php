@@ -24,7 +24,8 @@
                             <select class="form-select" name="type_document_id" id="type_document_id" required>
                                 <option value="">-- Choisir --</option>
                                 @foreach ($types as $type)
-                                    <option value="{{ $type->id }}" data-champs='@json($type->champs_requis)'>
+                                    <option value="{{ $type->id }}"
+                                            data-champs='@json($type->champs_requis)' {{ old('type_document_id') == $type->id ? 'selected' : '' }}>
                                         {{ $type->nom }}
                                     </option>
                                 @endforeach
@@ -36,7 +37,8 @@
 
                         <div class="mb-3">
                             <label for="prenom" class="form-label">Prénom</label>
-                            <input type="text" class="form-control" name="prenom" id="prenom" required>
+                            <input type="text" class="form-control" name="prenom" id="prenom"
+                                   value="{{ old('prenom') }}" required>
                             @error('prenom')
                             <div class="text-danger">{{ $message }}</div>
                             @enderror
@@ -44,7 +46,8 @@
 
                         <div class="mb-3">
                             <label for="nom" class="form-label">Nom</label>
-                            <input type="text" class="form-control" name="nom" id="nom" required>
+                            <input type="text" class="form-control" name="nom" id="nom" value="{{ old('nom') }}"
+                                   required>
                             @error('nom')
                             <div class="text-danger">{{ $message }}</div>
                             @enderror
@@ -54,8 +57,11 @@
                             <label for="statut" class="form-label">Statut</label>
                             <select class="form-select" name="statut" id="statut" required>
                                 <option value="">-- Choisir --</option>
-                                <option value="etatique">Étatique</option>
-                                <option value="contractuel">Contractuel</option>
+                                <option value="étatique" {{ old('statut') == 'étatique' ? 'selected' : '' }}>Étatique
+                                </option>
+                                <option value="contractuel" {{ old('statut') == 'contractuel' ? 'selected' : '' }}>
+                                    Contractuel
+                                </option>
                             </select>
                             @error('statut')
                             <div class="text-danger">{{ $message }}</div>
@@ -64,7 +70,8 @@
 
                         <div class="mb-3">
                             <label for="nin" class="form-label">Numéro d'Identification National</label>
-                            <input type="text" class="form-control" name="nin" id="nin" required>
+                            <input type="text" class="form-control" name="nin" id="nin" value="{{ old('nin') }}"
+                                   required>
                             @error('nin')
                             <div class="text-danger">{{ $message }}</div>
                             @enderror
@@ -72,7 +79,8 @@
 
                         <div class="mb-3">
                             <label for="matricule" class="form-label">Matricule</label>
-                            <input type="text" class="form-control" name="matricule" id="matricule">
+                            <input type="text" class="form-control" name="matricule" id="matricule"
+                                   value="{{ old('matricule') }}">
                             @error('matricule')
                             <div class="text-danger">{{ $message }}</div>
                             @enderror
@@ -83,7 +91,8 @@
                             <select class="form-select" name="structure_id" id="structure_id" required>
                                 <option value="">-- Choisir --</option>
                                 @foreach ($structures as $structure)
-                                    <option value="{{ $structure->id }}">{{ $structure->nom }}</option>
+                                    <option
+                                        value="{{ $structure->id }}" {{ old('structure_id') == $structure->id ? 'selected' : '' }}>{{ $structure->nom }}</option>
                                 @endforeach
                             </select>
                             @error('structure_id')
@@ -93,7 +102,8 @@
 
                         <div class="mb-3">
                             <label for="email" class="form-label">Email</label>
-                            <input type="email" class="form-control" name="email" id="email" required>
+                            <input type="email" class="form-control" name="email" id="email" value="{{ old('email') }}"
+                                   required>
                             @error('email')
                             <div class="text-danger">{{ $message }}</div>
                             @enderror
@@ -101,7 +111,8 @@
 
                         <div class="mb-3">
                             <label for="telephone" class="form-label">Numéro de téléphone</label>
-                            <input type="text" class="form-control" name="telephone" id="telephone" required>
+                            <input type="text" class="form-control" name="telephone" id="telephone"
+                                   value="{{ old('telephone') }}" required>
                             @error('telephone')
                             <div class="text-danger">{{ $message }}</div>
                             @enderror
@@ -112,7 +123,8 @@
                             <label for="categorie_socioprofessionnelle" class="form-label">Catégorie
                                 socio-professionnelle</label>
                             <input type="text" class="form-control" name="categorie_socioprofessionnelle"
-                                   id="categorie_socioprofessionnelle">
+                                   id="categorie_socioprofessionnelle"
+                                   value="{{ old('categorie_socioprofessionnelle') }}">
                             @error('categorie_socioprofessionnelle')
                             <div class="text-danger">{{ $message }}</div>
                             @enderror
@@ -120,7 +132,8 @@
 
                         <div class="mb-3 d-none" id="groupe_date_prise_service">
                             <label for="date_prise_service" class="form-label">Date de prise de service</label>
-                            <input type="date" class="form-control" name="date_prise_service" id="date_prise_service">
+                            <input type="date" class="form-control" name="date_prise_service" id="date_prise_service"
+                                   value="{{ old('date_prise_service') }}">
                             @error('date_prise_service')
                             <div class="text-danger">{{ $message }}</div>
                             @enderror
@@ -128,7 +141,8 @@
 
                         <div class="mb-3 d-none" id="groupe_date_fin_service">
                             <label for="date_fin_service" class="form-label">Date de fin de service</label>
-                            <input type="date" class="form-control" name="date_fin_service" id="date_fin_service">
+                            <input type="date" class="form-control" name="date_fin_service" id="date_fin_service"
+                                   value="{{ old('date_fin_service') }}">
                             @error('date_fin_service')
                             <div class="text-danger">{{ $message }}</div>
                             @enderror
@@ -137,7 +151,7 @@
                         <div class="mb-3 d-none" id="groupe_date_retraite">
                             <label for="date_depart_retraite" class="form-label">Date de départ à la retraite</label>
                             <input type="date" class="form-control" name="date_depart_retraite"
-                                   id="date_depart_retraite">
+                                   id="date_depart_retraite" value="{{ old('date_depart_retraite') }}">
                             @error('date_depart_retraite')
                             <div class="text-danger">{{ $message }}</div>
                             @enderror
@@ -195,7 +209,7 @@
         $('#statut').on('change', function () {
             const statut = $(this).val();
 
-            if (statut === 'etatique') {
+            if (statut === 'étatique') {
                 $('input[name="matricule"]').prop('required', true).closest('.mb-3').removeClass('d-none');
             } else {
                 $('input[name="matricule"]').prop('required', false).closest('.mb-3').addClass('d-none');

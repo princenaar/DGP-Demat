@@ -17,13 +17,14 @@
     <!-- Datatables CSS -->
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
 
-    <!-- Styles -->
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="bg-light">
 @include('layouts.navigation')
 
 <div class="container mt-4">
+    <h2 class="font-semibold text-xl text-gray-800 leading-tight">
+        @yield('header')
+    </h2>
     @yield('content')
 </div>
 

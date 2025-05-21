@@ -11,6 +11,7 @@ use App\Models\FichierJustificatif;
 use App\Services\DemandeMailService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Throwable;
 use Yajra\DataTables\Facades\DataTables;
 
@@ -109,5 +110,68 @@ class DemandeController extends Controller
             ->rawColumns(['actions'])
             ->make();
     }
+
+    public function changerEtat(Request $request, Demande $demande)
+    {
+        $request->validate([
+            'nouvel_etat' => 'required|string',
+            'commentaire' => 'required|string',
+        ]);
+
+        Log::info("Validation des données OK pour la demande ID: {$demande->id}");
+
+        $ancienCommentaire = $demande->commentaire ?? '';
+        $nouveauCommentaire = now()->format('d/m/Y H:i') . ' - ' . auth()->user()->name . ' : ' . $request->commentaire;
+        $demande->commentaire = trim($ancienCommentaire . "\n" . $nouveauCommentaire);
+
+        $etatInitial = $demande->etatDemande;
+        $etatFinal = $request->nouvel_etat;
+
+        Log::info("Changement d'état de [{$etatInitial->nom}] à [{$etatFinal}] pour la demande ID: {$demande->id}");
+
+        // Vérification et logique métier si besoin ici
+        $transitionsValides = [
+            EtatDemande::EN_ATTENTE => [EtatDemande::RECEPTIONNEE],
+            EtatDemande::RECEPTIONNEE => [EtatDemande::VALIDEE, EtatDemande::REFUSEE],
+            EtatDemande::VALIDEE => [EtatDemande::COMPLEMENTS, EtatDemande::EN_SIGNATURE],
+            EtatDemande::EN_SIGNATURE => [EtatDemande::SIGNEE, EtatDemande::SUSPENDUE],
+        ];
+
+        Log::info("Transitions à faire : " . json_encode($transitionsValides[$etatInitial->nom]));
+        Log::info("Nouvel état : {$etatFinal}");
+
+        if (!isset($transitionsValides[$etatInitial->nom]) || !in_array($etatFinal, $transitionsValides[$etatInitial->nom])) {
+            return back()->withErrors(['Transition invalide.']);
+        }
+
+        Log::info("Transition valide de {$etatInitial->nom} à {$etatFinal} pour la demande ID: {$demande->id}");
+
+        // Gestion des rôles et actions spécifiques
+        switch ($etatFinal) {
+            case 'DEMANDE_COMPLEMENTS':
+                // Mail avec lien temporaire (à implémenter dans une méthode dédiée)
+                break;
+
+            case 'EN_SIGNATURE':
+                // Génération du PDF sans signature/QR
+                break;
+
+            case 'SIGNEE':
+                // Génération du PDF final + envoi par mail
+                break;
+
+            case 'SUSPENDUE':
+                // Notification au demandeur
+                break;
+        }
+        $etatFinalModel = EtatDemande::where('nom', $etatFinal)->first();
+        $demande->etat_demande_id = $etatFinalModel->id;
+        Log::info("Etat de la demande ID: {$demande->id} mis à jour à {$etatFinalModel->nom}");
+        $demande->save();
+        Log::info("Demande ID: {$demande->id} mise à jour avec succès.");
+
+        return redirect()->route('demandes.show', $demande)->with('success', 'État modifié avec succès.');
+    }
+
 
 }
