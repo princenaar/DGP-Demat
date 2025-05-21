@@ -2,16 +2,20 @@
 
 namespace App\Http\Controllers;
 
+use App\Mail\DemandeComplementMail;
 use App\Models\EtatDemande;
 use App\Models\Structure;
 use App\Models\TypeDocument;
 use App\Http\Requests\DemandeStoreRequest;
 use App\Models\Demande;
 use App\Models\FichierJustificatif;
+use App\Models\User;
 use App\Services\DemandeMailService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\URL;
 use Throwable;
 use Yajra\DataTables\Facades\DataTables;
 
@@ -90,13 +94,22 @@ class DemandeController extends Controller
 
     public function show(Demande $demande)
     {
-        return view('demandes.show', compact('demande'));
+        $agents = User::role('AGENT')->get();
+        return view('demandes.show', compact('demande', 'agents'));
     }
 
 
-    public function data(Request $request)
+    public function data()
     {
-        $query = Demande::with('typeDocument', 'etatDemande', 'structure');
+        // Vérification du rôle de l'utilisateur
+        if (auth()->user()->hasRole('AGENT')) {
+            $query = Demande::where('agent_id', auth()->user()->id)
+                ->with('typeDocument', 'etatDemande', 'structure');
+        } elseif (auth()->user()->hasAnyRole(['ADMIN', 'CHEF_DE_DIVISION', 'DRH'])) {
+            $query = Demande::with('typeDocument', 'etatDemande', 'structure');
+        } else {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
 
         // Vous pouvez filtrer par rôle ici selon les besoins futurs
 
@@ -116,6 +129,7 @@ class DemandeController extends Controller
         $request->validate([
             'nouvel_etat' => 'required|string',
             'commentaire' => 'required|string',
+            'agent_id' => 'nullable|exists:users,id',
         ]);
 
         Log::info("Validation des données OK pour la demande ID: {$demande->id}");
@@ -148,22 +162,43 @@ class DemandeController extends Controller
 
         // Gestion des rôles et actions spécifiques
         switch ($etatFinal) {
-            case 'DEMANDE_COMPLEMENTS':
-                // Mail avec lien temporaire (à implémenter dans une méthode dédiée)
+            case EtatDemande::VALIDEE:
+                $demande->agent_id = $request->agent_id;
+                Log::info("Assignation de l'agent ID: {$request->agent_id} à la demande ID: {$demande->id}");
+                //TODO: Envoi de mail à l'agent
                 break;
 
-            case 'EN_SIGNATURE':
+            case EtatDemande::COMPLEMENTS:
+                // Mail avec lien temporaire (à implémenter dans une méthode dédiée)
+                if (auth()->id() !== $demande->agent_id) {
+                    abort(403, 'Action non autorisée.');
+                }
+
+                // Générer un lien temporaire vers demande.edit (valable 3 jours)
+                $lien = URL::temporarySignedRoute(
+                    'demandes.edit',
+                    now()->addDays(3),
+                    ['demande' => $demande->id]
+                );
+
+                // Envoyer un mail au demandeur
+                Mail::to($demande->email)->send(new DemandeComplementMail($demande, $lien));
+                break;
+
+            case EtatDemande::EN_SIGNATURE:
                 // Génération du PDF sans signature/QR
                 break;
 
-            case 'SIGNEE':
+            case EtatDemande::SIGNEE:
                 // Génération du PDF final + envoi par mail
                 break;
 
-            case 'SUSPENDUE':
+            case EtatDemande::SUSPENDUE:
                 // Notification au demandeur
                 break;
         }
+
+
         $etatFinalModel = EtatDemande::where('nom', $etatFinal)->first();
         $demande->etat_demande_id = $etatFinalModel->id;
         Log::info("Etat de la demande ID: {$demande->id} mis à jour à {$etatFinalModel->nom}");

@@ -1,4 +1,4 @@
-@php use Carbon\Carbon; @endphp
+@php use App\Models\EtatDemande;use Carbon\Carbon; @endphp
 @extends('layouts.app')
 
 @section('header')
@@ -70,7 +70,8 @@
                         </dd>
 
                         <dt class="col-sm-4">Commentaire :</dt>
-                        <dd class="col-sm-8">{{ $demande->commentaire ?? 'N/A' }}</dd>
+                        <!-- Affichage du commentaire avec un style de préservation des retours à la ligne -->
+                        <dd class="col-sm-8" style="white-space: pre-wrap">{{ $demande->commentaire ?? 'N/A' }}</dd>
 
                         <dt class="col-sm-4">Date de création :</dt>
                         <dd class="col-sm-8">{{ $demande->created_at ? $demande->created_at->format('d/m/Y H:m') : 'N/A' }}</dd>
@@ -133,49 +134,87 @@
                     Actions
                 </div>
                 <div class="card-body">
-                    <!-- Bouton -->
-                    @if($demande->etatDemande->nom == \App\Models\EtatDemande::EN_ATTENTE && auth()->user()->hasRole('ADMIN'))
-                        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#etatModal"
-                                data-etat="RECEPTIONNEE">
-                            Réceptionner
-                        </button>
-                        <!-- Modal -->
-                        <div class="modal fade" id="etatModal" tabindex="-1" aria-labelledby="etatModalLabel"
-                             aria-hidden="true">
-                            <div class="modal-dialog">
-                                <form method="POST" action="{{ route('demandes.changerEtat', $demande->id) }}">
-                                    @csrf
-                                    <input type="hidden" name="nouvel_etat" id="nouvel_etat_input">
+                    <div class="d-grid gap-2">
+                        <!-- Boutons -->
+                        @if($demande->etatDemande->nom == EtatDemande::EN_ATTENTE && auth()->user()->hasRole('ADMIN'))
+                            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#etatModal"
+                                    data-etat="RECEPTIONNEE">
+                                Réceptionner la demande
+                            </button>
+                        @elseif($demande->etatDemande->nom == EtatDemande::RECEPTIONNEE && auth()->user()->hasRole('CHEF_DE_DIVISION'))
 
-                                    <div class="modal-content">
-                                        <div class="modal-header">
-                                            <h5 class="modal-title" id="etatModalLabel">Confirmation du changement
-                                                d’état</h5>
-                                            <button type="button" class="btn-close" data-bs-dismiss="modal"
-                                                    aria-label="Fermer"></button>
+                            <button type="button" class="btn btn-primary" data-bs-toggle="modal"
+                                    data-bs-target="#etatModal"
+                                    data-etat="VALIDEE">
+                                Valider la demande
+                            </button>
+                            <button type="button" class="btn btn-danger" data-bs-toggle="modal"
+                                    data-bs-target="#etatModal"
+                                    data-etat="REFUSEE">
+                                Refuser la demande
+                            </button>
+                        @elseif($demande->etatDemande->nom === EtatDemande::VALIDEE && auth()->id() === $demande->agent_id)
+                            <button class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#etatModal"
+                                    data-etat="DEMANDE DE COMPLEMENTS">
+                                Demander des compléments
+                            </button>
+                        @else
+                            <span class="text-muted">Aucune action disponible.</span>
+                        @endif
+                    </div>
+                    <!-- Modal -->
+                    <div class="modal fade" id="etatModal" tabindex="-1" aria-labelledby="etatModalLabel"
+                         aria-hidden="true">
+                        <div class="modal-dialog">
+                            <form method="POST" action="{{ route('demandes.changerEtat', $demande->id) }}">
+                                @csrf
+                                <input type="hidden" name="nouvel_etat" id="nouvel_etat_input">
+
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title" id="etatModalLabel">Confirmation du changement
+                                            d’état</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                                aria-label="Fermer"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <div id="agentSelectWrapper" class="mb-3 d-none">
+                                            <label for="agent_id" class="form-label">Imputer à un agent</label>
+                                            <select name="agent_id" id="agent_id" class="form-select">
+                                                <option value="">Sélectionner un agent</option>
+                                                @foreach($agents as $agent)
+                                                    <option value="{{ $agent->id }}">{{ $agent->name }}</option>
+                                                @endforeach
+                                            </select>
                                         </div>
-                                        <div class="modal-body">
-                                            <div class="mb-3">
-                                                <label for="commentaire" class="form-label">Commentaire</label>
-                                                <textarea name="commentaire" id="commentaire" class="form-control"
-                                                          required></textarea>
-                                            </div>
-                                        </div>
-                                        <div class="modal-footer">
-                                            <button type="submit" class="btn btn-success">Confirmer</button>
+                                        <div class="mb-3">
+                                            <label for="commentaire" class="form-label">Commentaire</label>
+                                            <textarea name="commentaire" id="commentaire" class="form-control"
+                                                      required></textarea>
                                         </div>
                                     </div>
-                                </form>
-                            </div>
+                                    <div class="modal-footer">
+                                        <button type="submit" class="btn btn-success">Confirmer</button>
+                                    </div>
+                                </div>
+                            </form>
                         </div>
-                    @else
-                        <span class="text-muted">Aucune action disponible.</span>
-                    @endif
+                    </div>
                     <script>
                         const etatModal = document.getElementById('etatModal');
                         etatModal.addEventListener('show.bs.modal', event => {
                             const button = event.relatedTarget;
-                            document.getElementById('nouvel_etat_input').value = button.getAttribute('data-etat');
+                            const etat = button.getAttribute('data-etat');
+                            document.getElementById('nouvel_etat_input').value = etat;
+
+                            // Affiche ou masque le select agent selon l'état
+                            const agentSelectWrapper = document.getElementById('agentSelectWrapper');
+                            if (etat === 'VALIDEE') {
+                                agentSelectWrapper.classList.remove('d-none');
+                            } else {
+                                agentSelectWrapper.classList.add('d-none');
+                            }
+
                         });
                     </script>
 
