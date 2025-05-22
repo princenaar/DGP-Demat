@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\DemandeUpdateRequest;
 use App\Mail\DemandeComplementMail;
 use App\Models\EtatDemande;
 use App\Models\Structure;
@@ -55,20 +56,8 @@ class DemandeController extends Controller
                 'etat_demande_id' => EtatDemande::where('nom', EtatDemande::EN_ATTENTE)->value('id'),
             ]);
 
-            // Gestion des fichiers justificatifs
-            if ($request->hasFile('fichiers')) {
-                foreach ($request->file('fichiers') as $fichier) {
-                    $path = $fichier->store('justificatifs', 'local');
-
-                    FichierJustificatif::create([
-                        'demande_id' => $demande->id,
-                        'nom' => $fichier->getClientOriginalName(),
-                        'chemin' => $path,
-                        'mime_type' => $fichier->getMimeType(),
-                        'taille' => $fichier->getSize(),
-                    ]);
-                }
-            }
+            // Enregistrement des justificatifs
+            $this->saveFile($request, $demande);
 
             DB::commit();
 
@@ -165,7 +154,6 @@ class DemandeController extends Controller
             case EtatDemande::VALIDEE:
                 $demande->agent_id = $request->agent_id;
                 Log::info("Assignation de l'agent ID: {$request->agent_id} à la demande ID: {$demande->id}");
-                //TODO: Envoi de mail à l'agent
                 break;
 
             case EtatDemande::COMPLEMENTS:
@@ -186,7 +174,7 @@ class DemandeController extends Controller
                 break;
 
             case EtatDemande::EN_SIGNATURE:
-                // Génération du PDF sans signature/QR
+
                 break;
 
             case EtatDemande::SIGNEE:
@@ -208,5 +196,69 @@ class DemandeController extends Controller
         return redirect()->route('demandes.show', $demande)->with('success', 'État modifié avec succès.');
     }
 
+    /**
+     * Affiche le formulaire d'édition de la demande.
+     *
+     * @param Demande $demande
+     * @return \Illuminate\View\View
+     */
+    public function edit(Demande $demande)
+    {
+        if ($demande->etatDemande->nom !== EtatDemande::COMPLEMENTS) {
+            abort(403, 'Cette demande ne peut pas être modifiée.');
+        }
+
+        $structures = Structure::all();
+
+        return view('demandes.edit', compact('demande', 'structures'));
+    }
+
+    /**
+     * Met à jour la demande.
+     *
+     * @param Request $request
+     * @param Demande $demande
+     * @return \Illuminate\Http\RedirectResponse
+     */
+    public function update(DemandeUpdateRequest $request)
+    {
+        //Recuperation de la demande
+        $demande = Demande::findOrFail($request->id);
+        //Changer l'état de la demande (VALIDÉE à nouveau)
+        $demande->etat_demande_id = EtatDemande::where('nom', EtatDemande::VALIDEE)->value('id');
+        // Mettre à jour les champs validés
+        $demande->update($request->validated());
+        // Mettre à jour les fichiers justificatifs
+        $this->saveFile($request, $demande);
+
+        //Rediriger vers la page de création de demande avec un message de succès (update not accessible unsigned)
+        return redirect()->route('demandes.create', $demande)
+            ->with('success', 'Votre demande a bien été mise à jour.');
+    }
+
+    /**
+     * Enregistre les fichiers justificatifs.
+     *
+     * @param Request $request
+     * @param Demande $demande
+     * @return void
+     */
+    private function saveFile(Request $request, Demande $demande)
+    {
+        // Gestion des fichiers justificatifs
+        if ($request->hasFile('fichiers')) {
+            foreach ($request->file('fichiers') as $fichier) {
+                $path = $fichier->store('justificatifs', 'local');
+
+                FichierJustificatif::create([
+                    'demande_id' => $demande->id,
+                    'nom' => $fichier->getClientOriginalName(),
+                    'chemin' => $path,
+                    'mime_type' => $fichier->getMimeType(),
+                    'taille' => $fichier->getSize(),
+                ]);
+            }
+        }
+    }
 
 }

@@ -13,6 +13,7 @@ Route::get('/', function () {
 //Demandes routes
 Route::post('/demandes', [DemandeController::class, 'store'])->name('demandes.store');
 Route::get('/demandes/{demande}/edit', [DemandeController::class, 'edit'])->name('demandes.edit')->middleware('signed');
+Route::put('/demandes/update', [DemandeController::class, 'update'])->name('demandes.update');
 Route::get('/demandes/create', [DemandeController::class, 'create'])->name('demandes.create');
 
 

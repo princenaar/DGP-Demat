@@ -7,6 +7,18 @@
 
 @section('content')
     <div class="row">
+        @if(session('success'))
+            <div class="col-md-12">
+                <div class="card border-success mb-4">
+                    <div class="card-header bg-success text-white">
+                        Demande traitée avec succès
+                    </div>
+                    <div class="card-body text-success">
+                        <p class="card-text">{{ session('success') }}</p>
+                    </div>
+                </div>
+            </div>
+        @endif
         <div class="col-md-8">
             <div class="card">
                 <div class="card-header">
