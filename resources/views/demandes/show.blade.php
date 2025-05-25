@@ -166,6 +166,10 @@
                                 Refuser la demande
                             </button>
                         @elseif($demande->etatDemande->nom === EtatDemande::VALIDEE && auth()->id() === $demande->agent_id)
+                            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#etatModal"
+                                    data-etat="EN SIGNATURE">
+                                Envoyer en signature
+                            </button>
                             <button class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#etatModal"
                                     data-etat="DEMANDE DE COMPLEMENTS">
                                 Demander des compléments
