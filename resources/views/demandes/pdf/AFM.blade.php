@@ -44,7 +44,7 @@
             background-color: #ccc;
             border: 1px solid #aaa;
             margin-bottom: 30px;
-            margin-top: 200px;
+            margin-top: 150px;
         }
 
         .content {
@@ -70,7 +70,7 @@
         <p>
             Je soussignée, Monsieur le Directeur des Ressources humaines, atteste que Mme/M.
             <strong>{{ $demande->prenom }}</strong> <strong>{{ strtoupper($demande->nom) }}</strong>,
-            <strong>{{ $demande->csp }}</strong>, @if($demande->statut === 'contractuel')
+            {{ $demande->categorie_socioprofessionnelle }}, @if($demande->statut === 'contractuel')
                 contractuel,
             @elseif($demande->statut === 'étatique')
                 matricule de solde n° <strong>{{ $demande->matricule }},</strong>
