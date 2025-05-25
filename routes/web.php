@@ -20,6 +20,7 @@ Route::get('/demandes/create', [DemandeController::class, 'create'])->name('dema
 Route::middleware('auth')->group(function () {
     Route::get('/demandes', [DemandeController::class, 'index'])->name('demandes.index');
     Route::post('/demandes/{demande}/changer-etat', [DemandeController::class, 'changerEtat'])->name('demandes.changerEtat');
+    Route::get('demandes/{demande}/apercu-pdf', [DemandeController::class, 'apercuPdf'])->name('demandes.pdf.apercu');
     Route::get('/demandes/data', [DemandeController::class, 'data'])->name('demandes.data');
     Route::get('/demandes/{demande}', [DemandeController::class, 'show'])->name('demandes.show');
 });

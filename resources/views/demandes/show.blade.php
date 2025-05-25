@@ -233,5 +233,22 @@
                 </div>
             </div>
         </div>
+        @if($pdfBase64)
+            <div class="col-md-12 mt-4">
+                <div class="card">
+                    <div class="card-header">
+                        Aperçu du document final
+                    </div>
+                    <div class="card-body text-center">
+                        <a href="data:application/pdf;base64,{{ $pdfBase64 }}" download="Demande_{{ $demande->id }}.pdf"
+                           class="btn btn-primary mb-3">
+                            Télécharger le PDF
+                        </a>
+
+                        <iframe src="data:application/pdf;base64,{{ $pdfBase64 }}" width="100%" height="600px"></iframe>
+                    </div>
+                </div>
+            </div>
+        @endif
     </div>
 @endsection

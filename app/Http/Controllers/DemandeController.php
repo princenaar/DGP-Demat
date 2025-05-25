@@ -12,6 +12,7 @@ use App\Models\Demande;
 use App\Models\FichierJustificatif;
 use App\Models\User;
 use App\Services\DemandeMailService;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -84,7 +85,16 @@ class DemandeController extends Controller
     public function show(Demande $demande)
     {
         $agents = User::role('AGENT')->get();
-        return view('demandes.show', compact('demande', 'agents'));
+        // Aperçu de la demande finale
+        $pdfBase64 = null;
+        if ($demande->etatDemande->nom == EtatDemande::VALIDEE || $demande->etatDemande->nom == EtatDemande::EN_SIGNATURE) {
+            // Générer le PDF
+            $pdf = Pdf::loadView("demandes.pdf.{$demande->typeDocument->code}", compact('demande'));
+
+            // Convertir le contenu du PDF en Base64
+            $pdfBase64 = base64_encode($pdf->output());
+        }
+        return view('demandes.show', compact('demande', 'agents', 'pdfBase64'));
     }
 
 
@@ -121,16 +131,12 @@ class DemandeController extends Controller
             'agent_id' => 'nullable|exists:users,id',
         ]);
 
-        Log::info("Validation des données OK pour la demande ID: {$demande->id}");
-
         $ancienCommentaire = $demande->commentaire ?? '';
         $nouveauCommentaire = now()->format('d/m/Y H:i') . ' - ' . auth()->user()->name . ' : ' . $request->commentaire;
         $demande->commentaire = trim($ancienCommentaire . "\n" . $nouveauCommentaire);
 
         $etatInitial = $demande->etatDemande;
         $etatFinal = $request->nouvel_etat;
-
-        Log::info("Changement d'état de [{$etatInitial->nom}] à [{$etatFinal}] pour la demande ID: {$demande->id}");
 
         // Vérification et logique métier si besoin ici
         $transitionsValides = [
@@ -140,14 +146,10 @@ class DemandeController extends Controller
             EtatDemande::EN_SIGNATURE => [EtatDemande::SIGNEE, EtatDemande::SUSPENDUE],
         ];
 
-        Log::info("Transitions à faire : " . json_encode($transitionsValides[$etatInitial->nom]));
-        Log::info("Nouvel état : {$etatFinal}");
-
         if (!isset($transitionsValides[$etatInitial->nom]) || !in_array($etatFinal, $transitionsValides[$etatInitial->nom])) {
             return back()->withErrors(['Transition invalide.']);
         }
 
-        Log::info("Transition valide de {$etatInitial->nom} à {$etatFinal} pour la demande ID: {$demande->id}");
 
         // Gestion des rôles et actions spécifiques
         switch ($etatFinal) {
@@ -189,11 +191,10 @@ class DemandeController extends Controller
 
         $etatFinalModel = EtatDemande::where('nom', $etatFinal)->first();
         $demande->etat_demande_id = $etatFinalModel->id;
-        Log::info("Etat de la demande ID: {$demande->id} mis à jour à {$etatFinalModel->nom}");
         $demande->save();
-        Log::info("Demande ID: {$demande->id} mise à jour avec succès.");
-
-        return redirect()->route('demandes.show', $demande)->with('success', 'État modifié avec succès.');
+        return redirect()->route('demandes.show', $demande)->with([
+            'success' => 'État modifié avec succès.'
+        ]);
     }
 
     /**
@@ -260,5 +261,14 @@ class DemandeController extends Controller
             }
         }
     }
+
+    public function apercuPdf(Demande $demande)
+    {
+        $pdf = PDF::loadView('demandes.pdf.apercu', compact('demande'))
+            ->setPaper('A4');
+
+        return $pdf->stream("apercu_demande_{$demande->id}.pdf");
+    }
+
 
 }
