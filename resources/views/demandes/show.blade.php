@@ -174,6 +174,15 @@
                                     data-etat="DEMANDE DE COMPLEMENTS">
                                 Demander des compléments
                             </button>
+                        @elseif($demande->etatDemande->nom === EtatDemande::EN_SIGNATURE && auth()->user()->hasRole('DRH'))
+                            <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#etatModal"
+                                    data-etat="SIGNEE">
+                                Signer la demande
+                            </button>
+                            <button class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#etatModal"
+                                    data-etat="SUSPENDUE">
+                                Suspendre la demande
+                            </button>
                         @else
                             <span class="text-muted">Aucune action disponible.</span>
                         @endif
@@ -237,22 +246,29 @@
                 </div>
             </div>
         </div>
-        @if($pdfBase64)
-            <div class="col-md-12 mt-4">
-                <div class="card">
-                    <div class="card-header">
-                        Aperçu du document final
-                    </div>
-                    <div class="card-body text-center">
+
+        <div class="col-md-12 mt-4">
+            <div class="card">
+                <div class="card-header">
+                    Aperçu du document final
+                </div>
+                <div class="card-body text-center">
+                    @if($pdfBase64)
                         <a href="data:application/pdf;base64,{{ $pdfBase64 }}" download="Demande_{{ $demande->id }}.pdf"
                            class="btn btn-primary mb-3">
                             Télécharger le PDF
                         </a>
 
                         <iframe src="data:application/pdf;base64,{{ $pdfBase64 }}" width="100%" height="600px"></iframe>
-                    </div>
+                    @elseif($demande->etatDemande->nom === EtatDemande::SIGNEE)
+                        <iframe src="{{ route('demandes.voirPdf', $demande->id) }}" width="100%" height="600px"
+                                frameborder="0"></iframe>
+                    @else
+                        <p>Aucun aperçu disponible pour cette demande.</p>
+                    @endif
                 </div>
             </div>
-        @endif
+        </div>
+
     </div>
 @endsection

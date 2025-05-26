@@ -12,6 +12,7 @@
         "laravel/tinker": "^2.10.1",
         "laravel/ui": "^4.6",
         "pusher/pusher-php-server": "^7.2",
+        "simplesoftwareio/simple-qrcode": "^4.2",
         "spatie/laravel-permission": "^6.18",
         "yajra/laravel-datatables-oracle": "^12.2"
     },

@@ -1,4 +1,4 @@
-@php use Carbon\Carbon; @endphp
+@php use App\Models\EtatDemande;use Carbon\Carbon; @endphp
     <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -58,6 +58,20 @@
         .numero {
             text-align: right;
         }
+
+        .footer {
+            position: absolute;
+            bottom: 2cm;
+            left: 2cm;
+            right: 2cm;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .qr-code {
+            width: 100px;
+        }
     </style>
 </head>
 <body>
@@ -81,6 +95,24 @@
         <p>
             En foi de quoi, la présente attestation est établie pour servir et valoir ce que de droit.
         </p>
+        <!-- afficher qrCode si disponible -->
+        @if($demande->qr_code)
+            <div class="footer">
+                <!-- QR Code -->
+                <div>
+                    <img src="data:image/png;base64, {{ base64_encode($qrCode) }}" class="qr-code" alt="QR Code">
+                </div>
+
+                <!-- Signature -->
+                <div class="signature">
+                    <p>Monsieur le Directeur</p>
+                    <p>Signature électronique :</p>
+                    <img src="{{ public_path('images/signature.png') }}" alt="Signature" width="100">
+                </div>
+            </div>
+        @endif
+
+
     </div>
 </div>
 </body>

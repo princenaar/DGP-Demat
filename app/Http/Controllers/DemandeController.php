@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\DemandeUpdateRequest;
 use App\Mail\DemandeComplementMail;
+use App\Mail\DemandeSigneeMail;
 use App\Models\EtatDemande;
 use App\Models\Structure;
 use App\Models\TypeDocument;
@@ -17,7 +18,10 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
+use Illuminate\Support\Str;
+use SimpleSoftwareIO\QrCode\Facades\QrCode;
 use Throwable;
 use Yajra\DataTables\Facades\DataTables;
 
@@ -155,11 +159,10 @@ class DemandeController extends Controller
         switch ($etatFinal) {
             case EtatDemande::VALIDEE:
                 $demande->agent_id = $request->agent_id;
-                Log::info("Assignation de l'agent ID: {$request->agent_id} à la demande ID: {$demande->id}");
                 break;
 
             case EtatDemande::COMPLEMENTS:
-                // Mail avec lien temporaire (à implémenter dans une méthode dédiée)
+                // Vérification que l'utilisateur est l'agent assigné à la demande
                 if (auth()->id() !== $demande->agent_id) {
                     abort(403, 'Action non autorisée.');
                 }
@@ -181,6 +184,24 @@ class DemandeController extends Controller
 
             case EtatDemande::SIGNEE:
                 // Génération du PDF final + envoi par mail
+                // 1. Générer un code aléatoire unique
+                $code = Str::random(40);
+                $demande->code_qr = $code;
+
+                // 2. Générer le QR Code
+                $qrCode = QrCode::size(200)->generate(route('demandes.verifier', $demande->code_qr)); // Lien vers la page publique
+
+                //3. Générer le PDF
+                $pdf = Pdf::loadView("demandes.pdf.{$demande->typeDocument->code}", compact('demande', 'qrCode'))
+                    ->setPaper('A4');
+
+                // 4. Enregistrer le PDF
+                $pdfPath = 'demandes_signees/Demande_' . $demande->id . '.pdf';
+                $demande->fichier_pdf = $pdfPath;
+                Storage::disk('local')->put($pdfPath, $pdf->output());
+
+                // 5. Envoyer le mail avec le PDF en pièce jointe
+                Mail::to($demande->email)->send(new DemandeSigneeMail($demande, $pdfPath));
                 break;
 
             case EtatDemande::SUSPENDUE:
@@ -262,12 +283,27 @@ class DemandeController extends Controller
         }
     }
 
-    public function apercuPdf(Demande $demande)
+    public function voirPdf(Demande $demande)
     {
-        $pdf = PDF::loadView('demandes.pdf.apercu', compact('demande'))
-            ->setPaper('A4');
+        $pdfPath = $demande->fichier_pdf;
 
-        return $pdf->stream("apercu_demande_{$demande->id}.pdf");
+        if (Storage::disk('local')->exists($pdfPath)) {
+            $fullPath = Storage::disk('local')->path($pdfPath);
+            return response()->file($fullPath);
+        }
+
+        return redirect()->back()->withErrors(['Le fichier PDF n\'existe pas.']);
+    }
+
+    public function verifier(string $code)
+    {
+        $demande = Demande::where('code_qr', $code)->first();
+
+        if (!$demande) {
+            return view('demandes.verification')->withErrors(['Code QR invalide ou demande non authentique.']);
+        }
+
+        return view('demandes.verification', compact('demande'));
     }
 
 

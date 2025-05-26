@@ -15,12 +15,14 @@ Route::post('/demandes', [DemandeController::class, 'store'])->name('demandes.st
 Route::get('/demandes/{demande}/edit', [DemandeController::class, 'edit'])->name('demandes.edit')->middleware('signed');
 Route::put('/demandes/update', [DemandeController::class, 'update'])->name('demandes.update');
 Route::get('/demandes/create', [DemandeController::class, 'create'])->name('demandes.create');
+Route::get('/demandes/verifier/{code}', [DemandeController::class, 'verifier'])->name('demandes.verifier');
+
 
 
 Route::middleware('auth')->group(function () {
     Route::get('/demandes', [DemandeController::class, 'index'])->name('demandes.index');
     Route::post('/demandes/{demande}/changer-etat', [DemandeController::class, 'changerEtat'])->name('demandes.changerEtat');
-    Route::get('demandes/{demande}/apercu-pdf', [DemandeController::class, 'apercuPdf'])->name('demandes.pdf.apercu');
+    Route::get('demandes/{demande}/voirPdf', [DemandeController::class, 'voirPdf'])->name('demandes.voirPdf');
     Route::get('/demandes/data', [DemandeController::class, 'data'])->name('demandes.data');
     Route::get('/demandes/{demande}', [DemandeController::class, 'show'])->name('demandes.show');
 });
