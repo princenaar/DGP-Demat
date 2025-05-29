@@ -36,7 +36,6 @@ class DemandeController extends Controller
         return view('demandes.create', compact('types', 'structures'));
     }
 
-
     public function store(DemandeStoreRequest $request)
     {
         DB::beginTransaction();
@@ -93,14 +92,12 @@ class DemandeController extends Controller
         $pdfBase64 = null;
         if ($demande->etatDemande->nom == EtatDemande::VALIDEE || $demande->etatDemande->nom == EtatDemande::EN_SIGNATURE) {
             // Générer le PDF
-            $pdf = Pdf::loadView("demandes.pdf.{$demande->typeDocument->code}", compact('demande'));
-
+            $pdf = $this->generatePDF($demande);
             // Convertir le contenu du PDF en Base64
-            $pdfBase64 = base64_encode($pdf->output());
+            $pdfBase64 = base64_encode($pdf);
         }
         return view('demandes.show', compact('demande', 'agents', 'pdfBase64'));
     }
-
 
     public function data()
     {
@@ -187,18 +184,13 @@ class DemandeController extends Controller
                 // 1. Générer un code aléatoire unique
                 $code = Str::random(40);
                 $demande->code_qr = $code;
+                //2.Créer le PDF
+                $pdf = $this->generatePDF($demande);
 
-                // 2. Générer le QR Code
-                $qrCode = QrCode::size(200)->generate(route('demandes.verifier', $demande->code_qr)); // Lien vers la page publique
-
-                //3. Générer le PDF
-                $pdf = Pdf::loadView("demandes.pdf.{$demande->typeDocument->code}", compact('demande', 'qrCode'))
-                    ->setPaper('A4');
-
-                // 4. Enregistrer le PDF
+                // 3. Enregistrer le PDF
                 $pdfPath = 'demandes_signees/Demande_' . $demande->id . '.pdf';
                 $demande->fichier_pdf = $pdfPath;
-                Storage::disk('local')->put($pdfPath, $pdf->output());
+                Storage::disk('local')->put($pdfPath, $pdf);
 
                 // 5. Envoyer le mail avec le PDF en pièce jointe
                 Mail::to($demande->email)->send(new DemandeSigneeMail($demande, $pdfPath));
@@ -306,5 +298,18 @@ class DemandeController extends Controller
         return view('demandes.verification', compact('demande'));
     }
 
+    private function generatePDF(Demande $demande): string
+    {
+        if ($demande->code_qr) {
+            $qrCode = QrCode::size(100)->generate(route('demandes.verifier', $demande->code_qr));
+        } else {
+            $qrCode = null;
+        }
+
+        $pdf = Pdf::loadView("demandes.pdf.{$demande->typeDocument->code}", compact('demande', 'qrCode'))
+            ->setPaper('A4');
+
+        return $pdf->output();
+    }
 
 }
