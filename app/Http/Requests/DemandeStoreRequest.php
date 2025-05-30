@@ -27,7 +27,7 @@ class DemandeStoreRequest extends FormRequest
             'prenom' => ['required', 'string'],
             'nin' => ['required', 'string'],
             'statut' => ['required', 'string', 'in:étatique,contractuel'],
-            'matricule' => ['required_if:statut,étatique', 'string'],
+            'matricule' => ['nullable','required_if:statut,étatique', 'string'],
             'structure_id' => ['required', 'exists:structures,id'],
 
             'email' => ['required', 'email'],

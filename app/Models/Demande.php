@@ -45,6 +45,12 @@ class Demande extends Model
         'code_qr',
     ];
 
+    protected $casts = [
+        'date_prise_service' => 'datetime',
+        'date_fin_service' => 'datetime',
+        'date_depart_retraite' => 'datetime',
+    ];
+
     public function typeDocument()
     {
         return $this->belongsTo(TypeDocument::class);
