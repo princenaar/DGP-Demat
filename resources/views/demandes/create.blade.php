@@ -218,7 +218,7 @@
 
         // Cacher le champ matricule par défaut
         $(document).ready(function () {
-            $('input[name="matricule"]').closest('.mb-3').addClass('d-none');
+            $('input[name="matricule"]').prop('required', false).closest('.mb-3').addClass('d-none');
         });
     </script>
 @endsection
