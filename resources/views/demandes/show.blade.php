@@ -217,6 +217,30 @@
                                             <textarea name="commentaire" id="commentaire" class="form-control"
                                                       required></textarea>
                                         </div>
+                                        <div class="mb-2">
+                                            <small class="text-muted">Texte rapide :</small>
+                                            <div class="d-flex flex-wrap gap-2 mt-1">
+                                                <button type="button" class="btn btn-outline-secondary btn-sm"
+                                                        onclick="ajouterCommentaire('Urgence signalée')">Urgence
+                                                    signalée
+                                                </button>
+                                                <button type="button" class="btn btn-outline-secondary btn-sm"
+                                                        onclick="ajouterCommentaire('M\'en parler')">M'en parler
+                                                </button>
+                                                <button type="button" class="btn btn-outline-secondary btn-sm"
+                                                        onclick="ajouterCommentaire('Justificatifs invalides')">
+                                                    Justificatifs invalides
+                                                </button>
+                                                <button type="button" class="btn btn-outline-secondary btn-sm"
+                                                        onclick="ajouterCommentaire('Dossier incomplet')">Dossier
+                                                    incomplet
+                                                </button>
+                                                <button type="button" class="btn btn-outline-secondary btn-sm"
+                                                        onclick="ajouterCommentaire('Rien à signaler')">Rien à signaler
+                                                </button>
+                                            </div>
+                                        </div>
+
                                     </div>
                                     <div class="modal-footer">
                                         <button type="submit" class="btn btn-success">Confirmer</button>
@@ -225,6 +249,7 @@
                             </form>
                         </div>
                     </div>
+                    <!-- / Modal -->
                     <script>
                         const etatModal = document.getElementById('etatModal');
                         etatModal.addEventListener('show.bs.modal', event => {
@@ -239,8 +264,13 @@
                             } else {
                                 agentSelectWrapper.classList.add('d-none');
                             }
-
                         });
+
+                        function ajouterCommentaire(texte) {
+                            const textarea = document.getElementById('commentaire');
+                            textarea.value = texte + "\n";
+                            textarea.focus();
+                        }
                     </script>
 
                 </div>
