@@ -11,7 +11,6 @@
                 <tr>
                     <th>Nom</th>
                     <th>Prénom</th>
-                    <th>NIN</th>
                     <th>Structure</th>
                     <th>Type</th>
                     <th>État</th>
@@ -39,7 +38,6 @@
                 columns: [
                     {data: 'nom', name: 'nom'},
                     {data: 'prenom', name: 'prenom'},
-                    {data: 'nin', name: 'nin'},
                     {data: 'structure', name: 'structure.nom', orderable: false, searchable: false},
                     {data: 'type', name: 'typeDocument.nom', orderable: false, searchable: false},
                     {data: 'etat', name: 'etatDemande.nom', orderable: false, searchable: false},
@@ -48,7 +46,7 @@
                 ],
                 columnDefs: [
                     {
-                        targets: 6,
+                        targets: 5,
                         render: function (data) {
                             moment.locale('fr');
                             return moment(data).format('DD/MM/YYYY');
