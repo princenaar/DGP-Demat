@@ -2,29 +2,29 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\DemandeStoreRequest;
 use App\Http\Requests\DemandeUpdateRequest;
 use App\Mail\DemandeComplementMail;
 use App\Mail\DemandeSigneeMail;
+use App\Models\Demande;
 use App\Models\EtatDemande;
+use App\Models\FichierJustificatif;
 use App\Models\Structure;
 use App\Models\TypeDocument;
-use App\Http\Requests\DemandeStoreRequest;
-use App\Models\Demande;
-use App\Models\FichierJustificatif;
 use App\Models\User;
 use App\Services\DemandeMailService;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
+use Illuminate\View\View;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
 use Throwable;
 use Yajra\DataTables\Facades\DataTables;
-
 
 class DemandeController extends Controller
 {
@@ -51,6 +51,7 @@ class DemandeController extends Controller
                 'structure_id' => $request->structure_id,
                 'email' => $request->email,
                 'telephone' => $request->telephone,
+                'statut' => $request->statut,
 
                 'categorie_socioprofessionnelle' => $request->categorie_socioprofessionnelle,
                 'date_prise_service' => $request->date_prise_service,
@@ -69,13 +70,14 @@ class DemandeController extends Controller
             DemandeMailService::envoyer(
                 $demande,
                 'Confirmation de votre demande',
-                'Votre demande a bien été enregistrée sous le numéro ' . $demande->id . '. Elle est en cours de traitement.'
+                'Votre demande a bien été enregistrée sous le numéro '.$demande->id.'. Elle est en cours de traitement.'
             );
 
-            return redirect()->route('demandes.create')->with('success', 'Votre demande a été enregistrée avec succès sous le numéro ' . $demande->id . '.');
+            return redirect()->route('demandes.create')->with('success', 'Votre demande a été enregistrée avec succès sous le numéro '.$demande->id.'.');
         } catch (Throwable $e) {
             DB::rollBack();
             report($e);
+
             return back()->withErrors(['error' => 'Une erreur est survenue. Veuillez réessayer.']);
         }
     }
@@ -96,6 +98,7 @@ class DemandeController extends Controller
             // Convertir le contenu du PDF en Base64
             $pdfBase64 = base64_encode($pdf);
         }
+
         return view('demandes.show', compact('demande', 'agents', 'pdfBase64'));
     }
 
@@ -114,9 +117,9 @@ class DemandeController extends Controller
         // Vous pouvez filtrer par rôle ici selon les besoins futurs
 
         return DataTables::of($query)
-            ->addColumn('etat', fn($demande) => $demande->etatDemande->nom)
-            ->addColumn('type', fn($demande) => $demande->typeDocument->nom)
-            ->addColumn('structure', fn($demande) => $demande->structure->nom ?? '-')
+            ->addColumn('etat', fn ($demande) => $demande->etatDemande->nom)
+            ->addColumn('type', fn ($demande) => $demande->typeDocument->nom)
+            ->addColumn('structure', fn ($demande) => $demande->structure->nom ?? '-')
             ->addColumn('actions', function ($demande) {
                 return view('demandes.partials.actions', compact('demande'))->render();
             })
@@ -133,8 +136,8 @@ class DemandeController extends Controller
         ]);
 
         $ancienCommentaire = $demande->commentaire ?? '';
-        $nouveauCommentaire = now()->format('d/m/Y H:i') . ' - ' . auth()->user()->name . ' : ' . $request->commentaire;
-        $demande->commentaire = trim($ancienCommentaire . "\n" . $nouveauCommentaire);
+        $nouveauCommentaire = now()->format('d/m/Y H:i').' - '.auth()->user()->name.' : '.$request->commentaire;
+        $demande->commentaire = trim($ancienCommentaire."\n".$nouveauCommentaire);
 
         $etatInitial = $demande->etatDemande;
         $etatFinal = $request->nouvel_etat;
@@ -147,10 +150,9 @@ class DemandeController extends Controller
             EtatDemande::EN_SIGNATURE => [EtatDemande::SIGNEE, EtatDemande::SUSPENDUE],
         ];
 
-        if (!isset($transitionsValides[$etatInitial->nom]) || !in_array($etatFinal, $transitionsValides[$etatInitial->nom])) {
+        if (! isset($transitionsValides[$etatInitial->nom]) || ! in_array($etatFinal, $transitionsValides[$etatInitial->nom])) {
             return back()->withErrors(['Transition invalide.']);
         }
-
 
         // Gestion des rôles et actions spécifiques
         switch ($etatFinal) {
@@ -184,11 +186,11 @@ class DemandeController extends Controller
                 // 1. Générer un code aléatoire unique
                 $code = Str::random(40);
                 $demande->code_qr = $code;
-                //2.Créer le PDF
+                // 2.Créer le PDF
                 $pdf = $this->generatePDF($demande);
 
                 // 3. Enregistrer le PDF
-                $pdfPath = 'demandes_signees/Demande_' . $demande->id . '.pdf';
+                $pdfPath = 'demandes_signees/Demande_'.$demande->id.'.pdf';
                 $demande->fichier_pdf = $pdfPath;
                 Storage::disk('local')->put($pdfPath, $pdf);
 
@@ -201,20 +203,19 @@ class DemandeController extends Controller
                 break;
         }
 
-
         $etatFinalModel = EtatDemande::where('nom', $etatFinal)->first();
         $demande->etat_demande_id = $etatFinalModel->id;
         $demande->save();
+
         return redirect()->route('demandes.show', $demande)->with([
-            'success' => 'État modifié avec succès.'
+            'success' => 'État modifié avec succès.',
         ]);
     }
 
     /**
      * Affiche le formulaire d'édition de la demande.
      *
-     * @param Demande $demande
-     * @return \Illuminate\View\View
+     * @return View
      */
     public function edit(Demande $demande)
     {
@@ -230,31 +231,29 @@ class DemandeController extends Controller
     /**
      * Met à jour la demande.
      *
-     * @param Request $request
-     * @param Demande $demande
-     * @return \Illuminate\Http\RedirectResponse
+     * @param  Request  $request
+     * @param  Demande  $demande
+     * @return RedirectResponse
      */
     public function update(DemandeUpdateRequest $request)
     {
-        //Recuperation de la demande
+        // Recuperation de la demande
         $demande = Demande::findOrFail($request->id);
-        //Changer l'état de la demande (VALIDÉE à nouveau)
+        // Changer l'état de la demande (VALIDÉE à nouveau)
         $demande->etat_demande_id = EtatDemande::where('nom', EtatDemande::VALIDEE)->value('id');
         // Mettre à jour les champs validés
         $demande->update($request->validated());
         // Mettre à jour les fichiers justificatifs
         $this->saveFile($request, $demande);
 
-        //Rediriger vers la page de création de demande avec un message de succès (update not accessible unsigned)
-        return redirect()->route('demandes.create', $demande)
+        // Rediriger vers la page de création de demande avec un message de succès (update not accessible unsigned)
+        return redirect()->route('demandes.create')
             ->with('success', 'Votre demande a bien été mise à jour.');
     }
 
     /**
      * Enregistre les fichiers justificatifs.
      *
-     * @param Request $request
-     * @param Demande $demande
      * @return void
      */
     private function saveFile(Request $request, Demande $demande)
@@ -281,6 +280,7 @@ class DemandeController extends Controller
 
         if (Storage::disk('local')->exists($pdfPath)) {
             $fullPath = Storage::disk('local')->path($pdfPath);
+
             return response()->file($fullPath);
         }
 
@@ -291,7 +291,7 @@ class DemandeController extends Controller
     {
         $demande = Demande::where('code_qr', $code)->first();
 
-        if (!$demande) {
+        if (! $demande) {
             return view('demandes.verification')->withErrors(['Code QR invalide ou demande non authentique.']);
         }
 
@@ -311,5 +311,4 @@ class DemandeController extends Controller
 
         return $pdf->output();
     }
-
 }

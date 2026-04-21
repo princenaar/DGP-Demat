@@ -53,3 +53,5 @@ yarn-error.log
 /.junie
 /.worktrees
 /.mcp.json
+design-migration-plan.md
+update-the-design-template-vectorized-hearth.md
