@@ -1,27 +1,42 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
 <head>
-    <meta charset="UTF-8">
-    <title>{{ config('app.name') }}</title>
+    <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-4Q6Gf2aSP4eDXB8Miphtr37CMZZQ5oXLH2yaXMJ2w8e2ZtHTl7GptT4jmndRuHDT" crossorigin="anonymous">    <style>
-        .logo {
-            height: 40px;
-            margin-right: 10px;
-        }
-    </style>
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+
+    <title>{{ config('app.name', 'Portail DRH') }} — MSHP</title>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.bunny.net">
+    <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
+
+    <!-- Scripts -->
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
-<body>
-<nav class="navbar navbar-expand-lg navbar-light bg-light px-3">
-    <a class="navbar-brand d-flex align-items-center" href="#">
-        <img src="https://laravel.com/img/logomark.min.svg" alt="Logo" class="logo">
-        <span>{{ config('app.name') }}</span>
-    </a>
-</nav>
+<body class="min-h-screen flex flex-col">
+    @include('layouts.partials.gov-strip')
+    @php
+        $publicNav = '
+            <nav class="flex space-x-6 text-sm">
+                <a href="' . url('/') . '" class="text-ink-700 hover:text-senegal-green font-medium">Accueil</a>
+                <a href="' . route('demandes.create') . '" class="text-ink-700 hover:text-senegal-green font-medium">Faire une demande</a>
+                <a href="' . url('/#verification') . '" class="text-ink-700 hover:text-senegal-green font-medium">Vérifier un acte</a>
+                <a href="' . route('login') . '" class="text-ink-700 hover:text-senegal-green font-medium">Connexion</a>
+            </nav>
+        ';
+    @endphp
+    @include('layouts.partials.institutional-header', ['nav' => $publicNav])
 
-@yield('content')
+    <main class="flex-1">
+        @hasSection('content')
+            @yield('content')
+        @else
+            {{ $slot }}
+        @endif
+    </main>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/js/bootstrap.bundle.min.js" integrity="sha384-j1CDi7MgGQ12Z7Qab0qlWQ/Qqz24Gc6BM0thvEMVjHnfYGF0rmFCozFSxQBxwHKO" crossorigin="anonymous"></script>
-@yield('scripts')
+    @include('layouts.partials.footer')
+    @stack('scripts')
 </body>
 </html>

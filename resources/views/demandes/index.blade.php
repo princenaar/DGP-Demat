@@ -1,37 +1,33 @@
 @extends('layouts.app')
 
+@section('header')
+    Liste des demandes
+@endsection
+
 @section('content')
-    <div class="card mb-4">
-        <div class="card-header">
-            <h3 class="mb-0">Liste des demandes</h3>
-        </div>
-        <div class="card-body">
-            <table id="demandes-table" class="table table-bordered">
-                <thead>
+    <div class="bg-white rounded-lg shadow border border-gray-100">
+        <div class="overflow-x-auto">
+            <table id="demandes-table" class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-senegal-green text-white">
                 <tr>
-                    <th>Nom</th>
-                    <th>Prénom</th>
-                    <th>Structure</th>
-                    <th>Type</th>
-                    <th>État</th>
-                    <th>Date</th>
-                    <th>Actions</th>
+                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Nom</th>
+                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Prénom</th>
+                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Structure</th>
+                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Type</th>
+                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">État</th>
+                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Date</th>
+                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Actions</th>
                 </tr>
                 </thead>
             </table>
         </div>
-
     </div>
-
 @endsection
 
 @push('scripts')
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.30.1/moment-with-locales.min.js"
-            integrity="sha512-4F1cxYdMiAW98oomSLaygEwmCnIP38pb4Kx70yQYqRwLVCs3DbRumfBq82T08g/4LJ/smbFGFpmeFlQgoDccgg=="
-            crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script>
-        $(function () {
-            $('#demandes-table').DataTable({
+        document.addEventListener('DOMContentLoaded', () => {
+            new window.DataTable('#demandes-table', {
                 processing: true,
                 serverSide: true,
                 ajax: '{{ route('demandes.data') }}',
@@ -47,13 +43,25 @@
                 columnDefs: [
                     {
                         targets: 5,
-                        render: function (data) {
-                            moment.locale('fr');
-                            return moment(data).format('DD/MM/YYYY');
+                        render(data) {
+                            return new Intl.DateTimeFormat('fr-FR').format(new Date(data));
                         }
                     }
                 ],
-
+                language: {
+                    search: 'Rechercher :',
+                    lengthMenu: 'Afficher _MENU_ entrées',
+                    info: 'Affichage de _START_ à _END_ sur _TOTAL_ entrées',
+                    infoEmpty: 'Aucune entrée disponible',
+                    zeroRecords: 'Aucun résultat trouvé',
+                    processing: 'Chargement...',
+                    paginate: {
+                        first: 'Premier',
+                        last: 'Dernier',
+                        next: 'Suivant',
+                        previous: 'Précédent'
+                    }
+                }
             });
         });
     </script>

@@ -1,23 +1,17 @@
 @extends('layouts.app')
 
+@section('header')
+    Tableau de bord
+@endsection
+
 @section('content')
-<div class="container">
-    <div class="row justify-content-center">
-        <div class="col-md-8">
-            <div class="card">
-                <div class="card-header">{{ __('Dashboard') }}</div>
+    <div class="max-w-2xl mx-auto mt-8 px-4">
+        <div class="bg-white rounded-lg shadow p-8 border border-gray-100">
+            <x-auth-session-status class="mb-4" :status="session('status')" />
 
-                <div class="card-body">
-                    @if (session('status'))
-                        <div class="alert alert-success" role="alert">
-                            {{ session('status') }}
-                        </div>
-                    @endif
-
-                    {{ __('You are logged in!') }}
-                </div>
-            </div>
+            <p class="text-ink-900">
+                {{ __('Vous êtes connecté.') }}
+            </p>
         </div>
     </div>
-</div>
 @endsection
