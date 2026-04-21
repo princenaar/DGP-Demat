@@ -1,224 +1,145 @@
 @extends('layouts.public')
 
 @section('content')
-    <div class="container">
-        <div class="row">
-            <div class="col-md-6 mx-auto">
-                @if(session('success'))
-                    <div class="card border-success mb-4">
-                        <div class="card-header bg-success text-white">
-                            Demande soumise
+    <div class="mx-auto max-w-3xl px-4 py-10 sm:px-6 lg:px-8">
+        @if(session('success'))
+            <div class="mb-6 rounded bg-senegal-green/10 border-l-4 border-senegal-green p-4 text-senegal-green font-medium">
+                {{ session('success') }}
+            </div>
+        @else
+            <div class="bg-white rounded-lg shadow border border-gray-100 p-6 sm:p-8">
+                <h1 class="text-2xl font-bold text-ink-900">Faire une demande</h1>
+
+                <form method="POST" action="{{ route('demandes.store') }}" enctype="multipart/form-data" class="mt-6 space-y-5"
+                      x-data="{
+                          champs: {},
+                          statut: @js(old('statut', '')),
+                          init() {
+                              this.updateChamps(this.$refs.typeDocument);
+                          },
+                          updateChamps(select) {
+                              this.champs = JSON.parse(select.selectedOptions[0]?.dataset.champs || '{}');
+                          },
+                          visible(champ) {
+                              return Object.prototype.hasOwnProperty.call(this.champs, champ);
+                          },
+                          required(champ) {
+                              return Boolean(this.champs[champ]);
+                          },
+                      }">
+                    @csrf
+
+                    <div>
+                        <x-input-label for="type_document_id" value="Type de document" />
+                        <select x-ref="typeDocument" x-on:change="updateChamps($event.target)" class="mt-1 block w-full rounded-md border-gray-300 focus:border-senegal-green focus:ring-senegal-green" name="type_document_id" id="type_document_id" required>
+                            <option value="">-- Choisir --</option>
+                            @foreach ($types as $type)
+                                <option value="{{ $type->id }}" data-champs='@json($type->champs_requis)' @selected(old('type_document_id') == $type->id)>
+                                    {{ $type->nom }}
+                                </option>
+                            @endforeach
+                        </select>
+                        <x-input-error :messages="$errors->get('type_document_id')" class="mt-2" />
+                    </div>
+
+                    <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                        <div>
+                            <x-input-label for="prenom" value="Prénom" />
+                            <x-text-input type="text" name="prenom" id="prenom" class="mt-1 block w-full" :value="old('prenom')" required />
+                            <x-input-error :messages="$errors->get('prenom')" class="mt-2" />
                         </div>
-                        <div class="card-body text-success">
-                            <p class="card-text">{{ session('success') }}</p>
+
+                        <div>
+                            <x-input-label for="nom" value="Nom" />
+                            <x-text-input type="text" name="nom" id="nom" class="mt-1 block w-full" :value="old('nom')" required />
+                            <x-input-error :messages="$errors->get('nom')" class="mt-2" />
                         </div>
                     </div>
-                @else
-                    <h2 class="text-center">Faire une demande</h2>
-                    <form method="POST" action="{{ route('demandes.store') }}" enctype="multipart/form-data"
-                          id="form-demande">
-                        @csrf
 
-                        <div class="mb-3">
-                            <label for="type_document_id" class="form-label">Type de document</label>
-                            <select class="form-select" name="type_document_id" id="type_document_id" required>
+                    <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                        <div>
+                            <x-input-label for="statut" value="Statut" />
+                            <select x-model="statut" class="mt-1 block w-full rounded-md border-gray-300 focus:border-senegal-green focus:ring-senegal-green" name="statut" id="statut" required>
                                 <option value="">-- Choisir --</option>
-                                @foreach ($types as $type)
-                                    <option value="{{ $type->id }}"
-                                            data-champs='@json($type->champs_requis)' {{ old('type_document_id') == $type->id ? 'selected' : '' }}>
-                                        {{ $type->nom }}
-                                    </option>
-                                @endforeach
+                                <option value="étatique">Étatique</option>
+                                <option value="contractuel">Contractuel</option>
                             </select>
-                            @error('type_document_id')
-                            <div class="text-danger">{{ $message }}</div>
-                            @enderror
+                            <x-input-error :messages="$errors->get('statut')" class="mt-2" />
                         </div>
 
-                        <div class="mb-3">
-                            <label for="prenom" class="form-label">Prénom</label>
-                            <input type="text" class="form-control" name="prenom" id="prenom"
-                                   value="{{ old('prenom') }}" required>
-                            @error('prenom')
-                            <div class="text-danger">{{ $message }}</div>
-                            @enderror
+                        <div x-show="statut === 'étatique'" x-cloak>
+                            <x-input-label for="matricule" value="Matricule" />
+                            <x-text-input type="text" name="matricule" id="matricule" class="mt-1 block w-full" :value="old('matricule')" x-bind:required="statut === 'étatique'" />
+                            <x-input-error :messages="$errors->get('matricule')" class="mt-2" />
+                        </div>
+                    </div>
+
+                    <div>
+                        <x-input-label for="nin" value="Numéro d'Identification National" />
+                        <x-text-input type="text" name="nin" id="nin" class="mt-1 block w-full" :value="old('nin')" required />
+                        <x-input-error :messages="$errors->get('nin')" class="mt-2" />
+                    </div>
+
+                    <div>
+                        <x-input-label for="structure_id" value="Structure" />
+                        <select class="mt-1 block w-full rounded-md border-gray-300 focus:border-senegal-green focus:ring-senegal-green" name="structure_id" id="structure_id" required>
+                            <option value="">-- Choisir --</option>
+                            @foreach ($structures as $structure)
+                                <option value="{{ $structure->id }}" @selected(old('structure_id') == $structure->id)>{{ $structure->nom }}</option>
+                            @endforeach
+                        </select>
+                        <x-input-error :messages="$errors->get('structure_id')" class="mt-2" />
+                    </div>
+
+                    <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                        <div>
+                            <x-input-label for="email" value="Email" />
+                            <x-text-input type="email" name="email" id="email" class="mt-1 block w-full" :value="old('email')" required />
+                            <x-input-error :messages="$errors->get('email')" class="mt-2" />
                         </div>
 
-                        <div class="mb-3">
-                            <label for="nom" class="form-label">Nom</label>
-                            <input type="text" class="form-control" name="nom" id="nom" value="{{ old('nom') }}"
-                                   required>
-                            @error('nom')
-                            <div class="text-danger">{{ $message }}</div>
-                            @enderror
+                        <div>
+                            <x-input-label for="telephone" value="Numéro de téléphone" />
+                            <x-text-input type="text" name="telephone" id="telephone" class="mt-1 block w-full" :value="old('telephone')" required />
+                            <x-input-error :messages="$errors->get('telephone')" class="mt-2" />
+                        </div>
+                    </div>
+
+                    <div x-show="visible('categorie_socioprofessionnelle')" x-cloak>
+                        <x-input-label for="categorie_socioprofessionnelle" value="Catégorie socio-professionnelle" />
+                        <x-text-input type="text" name="categorie_socioprofessionnelle" id="categorie_socioprofessionnelle" class="mt-1 block w-full" :value="old('categorie_socioprofessionnelle')" x-bind:required="required('categorie_socioprofessionnelle')" />
+                        <x-input-error :messages="$errors->get('categorie_socioprofessionnelle')" class="mt-2" />
+                    </div>
+
+                    <div class="grid grid-cols-1 gap-5 sm:grid-cols-3">
+                        <div x-show="visible('date_prise_service')" x-cloak>
+                            <x-input-label for="date_prise_service" value="Date de prise de service" />
+                            <x-text-input type="date" name="date_prise_service" id="date_prise_service" class="mt-1 block w-full" :value="old('date_prise_service')" x-bind:required="required('date_prise_service')" />
+                            <x-input-error :messages="$errors->get('date_prise_service')" class="mt-2" />
                         </div>
 
-                        <div class="mb-3">
-                            <label for="statut" class="form-label">Statut</label>
-                            <select class="form-select" name="statut" id="statut" required>
-                                <option value="">-- Choisir --</option>
-                                <option value="étatique" {{ old('statut') == 'étatique' ? 'selected' : '' }}>Étatique
-                                </option>
-                                <option value="contractuel" {{ old('statut') == 'contractuel' ? 'selected' : '' }}>
-                                    Contractuel
-                                </option>
-                            </select>
-                            @error('statut')
-                            <div class="text-danger">{{ $message }}</div>
-                            @enderror
+                        <div x-show="visible('date_fin_service')" x-cloak>
+                            <x-input-label for="date_fin_service" value="Date de fin de service" />
+                            <x-text-input type="date" name="date_fin_service" id="date_fin_service" class="mt-1 block w-full" :value="old('date_fin_service')" x-bind:required="required('date_fin_service')" />
+                            <x-input-error :messages="$errors->get('date_fin_service')" class="mt-2" />
                         </div>
 
-                        <div class="mb-3">
-                            <label for="nin" class="form-label">Numéro d'Identification National</label>
-                            <input type="text" class="form-control" name="nin" id="nin" value="{{ old('nin') }}"
-                                   required>
-                            @error('nin')
-                            <div class="text-danger">{{ $message }}</div>
-                            @enderror
+                        <div x-show="visible('date_depart_retraite')" x-cloak>
+                            <x-input-label for="date_depart_retraite" value="Date de départ à la retraite" />
+                            <x-text-input type="date" name="date_depart_retraite" id="date_depart_retraite" class="mt-1 block w-full" :value="old('date_depart_retraite')" x-bind:required="required('date_depart_retraite')" />
+                            <x-input-error :messages="$errors->get('date_depart_retraite')" class="mt-2" />
                         </div>
+                    </div>
 
-                        <div class="mb-3">
-                            <label for="matricule" class="form-label">Matricule</label>
-                            <input type="text" class="form-control" name="matricule" id="matricule"
-                                   value="{{ old('matricule') }}">
-                            @error('matricule')
-                            <div class="text-danger">{{ $message }}</div>
-                            @enderror
-                        </div>
+                    <div>
+                        <x-input-label for="fichiers" value="Fichiers justificatifs" />
+                        <x-text-input type="file" name="fichiers[]" id="fichiers" class="mt-1 block w-full" multiple />
+                        <x-input-error :messages="$errors->get('fichiers')" class="mt-2" />
+                    </div>
 
-                        <div class="mb-3">
-                            <label for="structure_id" class="form-label">Structure</label>
-                            <select class="form-select" name="structure_id" id="structure_id" required>
-                                <option value="">-- Choisir --</option>
-                                @foreach ($structures as $structure)
-                                    <option
-                                        value="{{ $structure->id }}" {{ old('structure_id') == $structure->id ? 'selected' : '' }}>{{ $structure->nom }}</option>
-                                @endforeach
-                            </select>
-                            @error('structure_id')
-                            <div class="text-danger">{{ $message }}</div>
-                            @enderror
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="email" class="form-label">Email</label>
-                            <input type="email" class="form-control" name="email" id="email" value="{{ old('email') }}"
-                                   required>
-                            @error('email')
-                            <div class="text-danger">{{ $message }}</div>
-                            @enderror
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="telephone" class="form-label">Numéro de téléphone</label>
-                            <input type="text" class="form-control" name="telephone" id="telephone"
-                                   value="{{ old('telephone') }}" required>
-                            @error('telephone')
-                            <div class="text-danger">{{ $message }}</div>
-                            @enderror
-                        </div>
-
-                        {{-- Champs conditionnels --}}
-                        <div class="mb-3 d-none" id="groupe_categorie">
-                            <label for="categorie_socioprofessionnelle" class="form-label">Catégorie
-                                socio-professionnelle</label>
-                            <input type="text" class="form-control" name="categorie_socioprofessionnelle"
-                                   id="categorie_socioprofessionnelle"
-                                   value="{{ old('categorie_socioprofessionnelle') }}">
-                            @error('categorie_socioprofessionnelle')
-                            <div class="text-danger">{{ $message }}</div>
-                            @enderror
-                        </div>
-
-                        <div class="mb-3 d-none" id="groupe_date_prise_service">
-                            <label for="date_prise_service" class="form-label">Date de prise de service</label>
-                            <input type="date" class="form-control" name="date_prise_service" id="date_prise_service"
-                                   value="{{ old('date_prise_service') }}">
-                            @error('date_prise_service')
-                            <div class="text-danger">{{ $message }}</div>
-                            @enderror
-                        </div>
-
-                        <div class="mb-3 d-none" id="groupe_date_fin_service">
-                            <label for="date_fin_service" class="form-label">Date de fin de service</label>
-                            <input type="date" class="form-control" name="date_fin_service" id="date_fin_service"
-                                   value="{{ old('date_fin_service') }}">
-                            @error('date_fin_service')
-                            <div class="text-danger">{{ $message }}</div>
-                            @enderror
-                        </div>
-
-                        <div class="mb-3 d-none" id="groupe_date_retraite">
-                            <label for="date_depart_retraite" class="form-label">Date de départ à la retraite</label>
-                            <input type="date" class="form-control" name="date_depart_retraite"
-                                   id="date_depart_retraite" value="{{ old('date_depart_retraite') }}">
-                            @error('date_depart_retraite')
-                            <div class="text-danger">{{ $message }}</div>
-                            @enderror
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="fichiers" class="form-label">Fichiers justificatifs</label>
-                            <input type="file" class="form-control" name="fichiers[]" id="fichiers" multiple>
-                            @error('fichiers')
-                            <div class="text-danger">{{ $message }}</div>
-                            @enderror
-                        </div>
-
-                        <button type="submit" class="btn btn-primary">Soumettre la demande</button>
-                    </form>
-                @endif
+                    <x-primary-button>Soumettre la demande</x-primary-button>
+                </form>
             </div>
-        </div>
+        @endif
     </div>
-@endsection
-
-@section('scripts')
-    <script src="https://code.jquery.com/jquery-3.7.1.min.js"
-            integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
-    <script>
-        const champsMapping = {
-            'categorie_socioprofessionnelle': 'groupe_categorie',
-            'date_prise_service': 'groupe_date_prise_service',
-            'date_fin_service': 'groupe_date_fin_service',
-            'date_depart_retraite': 'groupe_date_retraite',
-        };
-
-        document.getElementById('type_document_id').addEventListener('change', function () {
-            const option = this.selectedOptions[0];
-            const champs = JSON.parse(option.dataset.champs || '{}');
-
-            // Réinitialiser tous les champs conditionnels
-            Object.values(champsMapping).forEach(id => {
-                document.getElementById(id).classList.add('d-none');
-                document.querySelector(`#${id} input`)?.removeAttribute('required');
-            });
-
-            // Activer les champs requis
-            Object.entries(champs).forEach(([champ, requis]) => {
-                const groupe = champsMapping[champ];
-                if (groupe) {
-                    document.getElementById(groupe).classList.remove('d-none');
-                    if (requis) {
-                        document.querySelector(`#${groupe} input`)?.setAttribute('required', 'required');
-                    }
-                }
-            });
-        });
-
-        $('#statut').on('change', function () {
-            const statut = $(this).val();
-
-            if (statut === 'étatique') {
-                $('input[name="matricule"]').prop('required', true).closest('.mb-3').removeClass('d-none');
-            } else {
-                $('input[name="matricule"]').prop('required', false).closest('.mb-3').addClass('d-none');
-            }
-        });
-
-        // Cacher le champ matricule par défaut
-        $(document).ready(function () {
-            $('input[name="matricule"]').prop('required', false).closest('.mb-3').addClass('d-none');
-        });
-    </script>
 @endsection

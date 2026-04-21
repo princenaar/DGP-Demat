@@ -46,8 +46,10 @@ yarn-error.log
 /.vscode
 /.zed
 
+# Local assistant and worktree metadata
 /.claude
 /.codex
 /.cursor
 /.junie
-.mcp.json
+/.worktrees
+/.mcp.json

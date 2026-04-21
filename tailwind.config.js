@@ -13,6 +13,16 @@ export default {
         extend: {
             fontFamily: {
                 sans: ['Figtree', ...defaultTheme.fontFamily.sans],
+                display: ['Figtree', ...defaultTheme.fontFamily.sans],
+            },
+            colors: {
+                senegal: {
+                    green:  '#00853F',
+                    yellow: '#FDEF42',
+                    red:    '#E31B23',
+                },
+                ink: { 900: '#0F172A', 700: '#334155', 500: '#64748B' },
+                paper: '#F8FAFC',
             },
         },
     },

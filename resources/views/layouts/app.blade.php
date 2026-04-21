@@ -5,39 +5,57 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
-    <title>{{ config('app.name', 'Laravel') }}</title>
+    <title>{{ config('app.name', 'Portail DRH') }} — MSHP</title>
 
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.bunny.net">
-    <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
 
-    <!-- Bootstrap CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-
-    <!-- Datatables CSS -->
-    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
-
+    <!-- Scripts -->
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
-<body class="bg-light">
-@include('layouts.navigation')
+<body class="min-h-screen flex flex-col">
+    @include('layouts.partials.gov-strip')
+    @php
+        $linkClass = 'inline-flex items-center border-b-2 px-1 pt-1 text-sm font-medium transition ';
+        $inactiveClass = 'border-transparent text-ink-700 hover:border-senegal-green hover:text-senegal-green';
+        $activeClass = 'border-senegal-green text-senegal-green';
+        $authNav = '<nav class="hidden md:flex items-center gap-6">';
+        $authNav .= '<a href="' . route('demandes.index') . '" class="' . $linkClass . (request()->routeIs('demandes.index') ? $activeClass : $inactiveClass) . '">Mes demandes</a>';
 
-<div class="container mt-4">
-    <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-        @yield('header')
-    </h2>
-    @yield('content')
-</div>
+        if (auth()->user()->hasRole('ADMIN')) {
+            $authNav .= '<a href="' . route('users.index') . '" class="' . $linkClass . (request()->routeIs('users.index') ? $activeClass : $inactiveClass) . '">Utilisateurs</a>';
+        }
 
-<!-- jQuery -->
-<script src="https://code.jquery.com/jquery-3.7.1.min.js"
-        integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
-<!-- Bootstrap JS -->
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+        $authNav .= '<a href="' . route('profile.edit') . '" class="' . $linkClass . (request()->routeIs('profile.edit') ? $activeClass : $inactiveClass) . '">Profil</a>';
+        $authNav .= '<form method="POST" action="' . route('logout') . '">' . csrf_field() . '<button type="submit" class="text-sm font-medium text-ink-700 hover:text-senegal-red transition">Déconnexion</button></form>';
+        $authNav .= '</nav>';
+    @endphp
+    @include('layouts.partials.institutional-header', ['nav' => $authNav])
 
-<!-- DataTables JS -->
-<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
-<script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+    <main class="flex-1 container mx-auto px-4 py-6">
+        @hasSection('header')
+            <header class="mb-6">
+                <h1 class="text-2xl font-bold text-ink-900">@yield('header')</h1>
+            </header>
+        @endif
 
-@stack('scripts')
+        @if(session('status'))
+            <div class="mb-6 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded" role="alert">
+                {{ session('status') }}
+            </div>
+        @endif
+
+        @if(session('error'))
+            <div class="mb-6 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded" role="alert">
+                {{ session('error') }}
+            </div>
+        @endif
+
+        @yield('content')
+    </main>
+
+    @include('layouts.partials.footer')
+    @stack('scripts')
 </body>
 </html>
