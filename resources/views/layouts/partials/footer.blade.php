@@ -1,4 +1,5 @@
 <footer class="bg-ink-900 text-white mt-auto">
+    @guest
     <div class="container mx-auto py-8 px-4">
         <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
             {{-- Contact --}}
@@ -7,10 +8,9 @@
                 <address class="not-italic text-sm text-gray-300">
                     <p class="mb-2">Direction des Ressources Humaines<br>
                     Ministère de la Santé et de l'Hygiène publique</p>
-                    <p class="mb-2">Avenue Bourguiba x Rue 12<br>
-                    Dakar, Sénégal</p>
-                    <p class="mb-2">Tél: +221 33 889 12 34</p>
-                    <p>Email: <a href="mailto:drh@mshp.sn" class="text-senegal-yellow hover:underline">drh@mshp.sn</a></p>
+                    <p class="mb-2">Fann Résidence, Rue Aimé Césaire</p>
+                    <p class="mb-2">Tél: +221 33 869 42 27</p>
+                    <p>Email: <a href="mailto:drh@sante.gouv.sn" class="text-senegal-yellow hover:underline">drh@sante.gouv.sn</a></p>
                 </address>
             </div>
 
@@ -54,6 +54,7 @@
             </div>
         </div>
     </div>
+    @endguest
     <div class="border-t border-gray-800 py-4">
         <div class="container mx-auto px-4 text-center text-sm text-gray-400">
             <p>&copy; {{ date('Y') }} Ministère de la Santé et de l'Hygiène publique — Direction des Ressources Humaines. Tous droits réservés.</p>
