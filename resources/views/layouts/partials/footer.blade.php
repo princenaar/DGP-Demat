@@ -20,7 +20,7 @@
                 <ul class="space-y-2 text-sm text-gray-300">
                     <li><a href="{{ route('demandes.create') }}" class="hover:text-senegal-yellow hover:underline">Faire une demande</a></li>
                     <li><a href="{{ url('/#verification') }}" class="hover:text-senegal-yellow hover:underline">Vérifier un acte</a></li>
-                    <li><a href="{{ route('login') }}" class="hover:text-senegal-yellow hover:underline">Espace agent</a></li>
+                    <li><a href="{{ route('demandes.create') }}" class="hover:text-senegal-yellow hover:underline">Espace agent</a></li>
                     <li><a href="#" class="hover:text-senegal-yellow hover:underline">FAQ</a></li>
                 </ul>
             </div>
@@ -29,10 +29,10 @@
             <div>
                 <h3 class="text-lg font-semibold mb-4">Portails gouvernementaux</h3>
                 <ul class="space-y-2 text-sm text-gray-300">
-                    <li><a href="https://www.gouv.sn" class="hover:text-senegal-yellow hover:underline" target="_blank">Portail du Gouvernement</a></li>
+                    <li><a href="https://primature.sn" class="hover:text-senegal-yellow hover:underline" target="_blank">Portail du Gouvernement</a></li>
                     <li><a href="https://www.fonctionpublique.gouv.sn" class="hover:text-senegal-yellow hover:underline" target="_blank">Fonction Publique</a></li>
                     <li><a href="https://www.sante.gouv.sn" class="hover:text-senegal-yellow hover:underline" target="_blank">MSHP</a></li>
-                    <li><a href="https://www.service-public.sn" class="hover:text-senegal-yellow hover:underline" target="_blank">Service Public</a></li>
+                    <li><a href="https://mobilite.sec.gouv.sn" class="hover:text-senegal-yellow hover:underline" target="_blank">MIRSAS</a></li>
                 </ul>
             </div>
 
@@ -58,7 +58,7 @@
     <div class="border-t border-gray-800 py-4">
         <div class="container mx-auto px-4 text-center text-sm text-gray-400">
             <p>&copy; {{ date('Y') }} Ministère de la Santé et de l'Hygiène publique — Direction des Ressources Humaines. Tous droits réservés.</p>
-            <p class="mt-1">Version {{ config('app.version', '1.0.0') }} — Portail de dématérialisation des actes administratifs.</p>
+            <p class="mt-1">Version {{ config('app.version', '1.0.0') }} — <a href="https://princenaar.github.io">Développé par Cheikh Abdou Lahad Diagne</a>.</p>
         </div>
     </div>
 </footer>

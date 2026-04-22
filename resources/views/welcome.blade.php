@@ -35,7 +35,7 @@
                     <h2 class="text-lg font-semibold text-ink-900">Vérifier un acte</h2>
                     <p class="mt-3 text-sm text-ink-700">Scannez le QR code de l’acte signé pour contrôler son authenticité.</p>
                 </div>
-                <a href="{{ route('login') }}" class="rounded-lg border border-gray-200 bg-white p-6 shadow-sm transition hover:border-senegal-green hover:shadow">
+                <a href="{{ route('demandes.create') }}" class="rounded-lg border border-gray-200 bg-white p-6 shadow-sm transition hover:border-senegal-green hover:shadow">
                     <h2 class="text-lg font-semibold text-ink-900">Espace agent</h2>
                     <p class="mt-3 text-sm text-ink-700">Accéder au suivi et au traitement des dossiers.</p>
                 </a>
@@ -54,8 +54,8 @@
                 <p class="mt-2 text-sm text-ink-700">Dépôt des demandes en ligne</p>
             </div>
             <div class="border-t-4 border-senegal-yellow bg-white p-5 shadow-sm">
-                <p class="text-3xl font-bold text-senegal-green">4</p>
-                <p class="mt-2 text-sm text-ink-700">Profils habilités au traitement</p>
+                <p class="text-3xl font-bold text-senegal-green">5</p>
+                <p class="mt-2 text-sm text-ink-700">Demande de documents dématérialisés</p>
             </div>
             <div class="border-t-4 border-senegal-yellow bg-white p-5 shadow-sm">
                 <p class="text-3xl font-bold text-senegal-green">QR</p>
