@@ -32,10 +32,14 @@ class DemandeController extends Controller
     {
         $types = TypeDocument::all();
         $structures = Structure::all();
+        $recaptchaSiteKey = config('services.recaptcha.site_key');
 
-        return view('demandes.create', compact('types', 'structures'));
+        return view('demandes.create', compact('types', 'structures', 'recaptchaSiteKey'));
     }
 
+    /**
+     * @throws Throwable
+     */
     public function store(DemandeStoreRequest $request)
     {
         DB::beginTransaction();

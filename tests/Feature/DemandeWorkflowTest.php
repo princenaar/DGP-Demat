@@ -16,7 +16,9 @@ use Database\Seeders\RolesAndPermissionsSeeder;
 use Database\Seeders\StructureSeeder;
 use Database\Seeders\TypeDocumentSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
@@ -35,6 +37,11 @@ class DemandeWorkflowTest extends TestCase
             TypeDocumentSeeder::class,
             StructureSeeder::class,
         ]);
+
+        config([
+            'services.recaptcha.site_key' => 'test-site-key',
+            'services.recaptcha.secret_key' => 'test-secret-key',
+        ]);
     }
 
     public function test_public_create_page_renders_reference_data(): void
@@ -46,6 +53,10 @@ class DemandeWorkflowTest extends TestCase
             ->assertViewIs('demandes.create')
             ->assertViewHas('types')
             ->assertViewHas('structures')
+            ->assertViewHas('recaptchaSiteKey')
+            ->assertSee('g-recaptcha', false)
+            ->assertSee('Rechercher une structure')
+            ->assertSee('Ajouter des pièces justificatives')
             ->assertSee('Faire une demande');
     }
 
@@ -53,6 +64,9 @@ class DemandeWorkflowTest extends TestCase
     {
         Mail::fake();
         Storage::fake('local');
+        Http::fake([
+            'www.google.com/recaptcha/api/siteverify' => Http::response(['success' => true]),
+        ]);
 
         $type = TypeDocument::where('code', 'TRV')->firstOrFail();
         $structure = Structure::firstOrFail();
@@ -63,11 +77,12 @@ class DemandeWorkflowTest extends TestCase
             'prenom' => 'Awa',
             'statut' => 'étatique',
             'nin' => '1234567890123',
-            'matricule' => 'MAT-001',
+            'matricule' => '123456A',
             'structure_id' => $structure->id,
             'email' => 'awa.diop@example.test',
-            'telephone' => '771234567',
+            'telephone' => '+221 77 123 45 67',
             'date_prise_service' => '2024-01-15',
+            'g-recaptcha-response' => 'valid-token',
             'fichiers' => [
                 UploadedFile::fake()->create('piece.pdf', 128, 'application/pdf'),
             ],
@@ -94,6 +109,9 @@ class DemandeWorkflowTest extends TestCase
     {
         $type = TypeDocument::firstOrFail();
         $structure = Structure::firstOrFail();
+        Http::fake([
+            'www.google.com/recaptcha/api/siteverify' => Http::response(['success' => true]),
+        ]);
 
         $response = $this->post(route('demandes.store'), [
             'type_document_id' => $type->id,
@@ -103,9 +121,139 @@ class DemandeWorkflowTest extends TestCase
             'nin' => '1234567890123',
             'structure_id' => $structure->id,
             'email' => 'awa.diop@example.test',
+            'telephone' => '+221 77 123 45 67',
+            'g-recaptcha-response' => 'valid-token',
         ]);
 
         $response->assertSessionHasErrors('matricule');
+    }
+
+    public function test_store_demande_validates_masks(): void
+    {
+        $type = TypeDocument::where('code', 'TRV')->firstOrFail();
+        $structure = Structure::firstOrFail();
+        Http::preventStrayRequests();
+
+        $response = $this->post(route('demandes.store'), [
+            'type_document_id' => $type->id,
+            'nom' => 'Diop',
+            'prenom' => 'Awa',
+            'statut' => 'étatique',
+            'nin' => '123',
+            'matricule' => 'MAT-001',
+            'structure_id' => $structure->id,
+            'email' => 'awa.diop@example.test',
+            'telephone' => '771234567',
+            'date_prise_service' => '2024-01-15',
+            'g-recaptcha-response' => 'invalid-token',
+        ]);
+
+        $response->assertSessionHasErrors([
+            'nin',
+            'matricule',
+            'telephone',
+        ]);
+    }
+
+    public function test_store_demande_rejects_failed_recaptcha_verification(): void
+    {
+        $type = TypeDocument::where('code', 'TRV')->firstOrFail();
+        $structure = Structure::firstOrFail();
+        Http::fake([
+            'www.google.com/recaptcha/api/siteverify' => Http::response(['success' => false]),
+        ]);
+
+        $response = $this->post(route('demandes.store'), [
+            'type_document_id' => $type->id,
+            'nom' => 'Diop',
+            'prenom' => 'Awa',
+            'statut' => 'étatique',
+            'nin' => '1234567890123',
+            'matricule' => '123456A',
+            'structure_id' => $structure->id,
+            'email' => 'awa.diop@example.test',
+            'telephone' => '+221 77 123 45 67',
+            'date_prise_service' => '2024-01-15',
+            'g-recaptcha-response' => 'invalid-token',
+        ]);
+
+        $response->assertSessionHasErrors('g-recaptcha-response');
+    }
+
+    public function test_store_demande_does_not_call_recaptcha_when_local_validation_fails(): void
+    {
+        Http::preventStrayRequests();
+
+        $response = $this->post(route('demandes.store'), [
+            'type_document_id' => 'invalid',
+            'nom' => '',
+            'prenom' => '',
+            'statut' => 'étatique',
+            'nin' => '123',
+            'matricule' => 'MAT-001',
+            'structure_id' => 'invalid',
+            'email' => 'invalid-email',
+            'telephone' => '771234567',
+            'g-recaptcha-response' => 'token-that-should-not-be-sent',
+        ]);
+
+        $response->assertSessionHasErrors([
+            'type_document_id',
+            'nom',
+            'prenom',
+            'nin',
+            'matricule',
+            'structure_id',
+            'email',
+            'telephone',
+        ]);
+    }
+
+    public function test_store_demande_handles_unavailable_recaptcha_service(): void
+    {
+        $type = TypeDocument::where('code', 'TRV')->firstOrFail();
+        $structure = Structure::firstOrFail();
+        Http::fake([
+            'www.google.com/recaptcha/api/siteverify' => fn () => throw new ConnectionException('Timeout'),
+        ]);
+
+        $response = $this->post(route('demandes.store'), [
+            'type_document_id' => $type->id,
+            'nom' => 'Diop',
+            'prenom' => 'Awa',
+            'statut' => 'contractuel',
+            'nin' => '1234567890123',
+            'structure_id' => $structure->id,
+            'email' => 'awa.diop@example.test',
+            'telephone' => '+221 77 123 45 67',
+            'date_prise_service' => '2024-01-15',
+            'g-recaptcha-response' => 'valid-token',
+        ]);
+
+        $response->assertSessionHasErrors('g-recaptcha-response');
+    }
+
+    public function test_store_demande_fails_when_recaptcha_secret_is_missing(): void
+    {
+        config(['services.recaptcha.secret_key' => null]);
+
+        $type = TypeDocument::where('code', 'TRV')->firstOrFail();
+        $structure = Structure::firstOrFail();
+
+        $response = $this->post(route('demandes.store'), [
+            'type_document_id' => $type->id,
+            'nom' => 'Diop',
+            'prenom' => 'Awa',
+            'statut' => 'contractuel',
+            'nin' => '1234567890123',
+            'structure_id' => $structure->id,
+            'email' => 'awa.diop@example.test',
+            'telephone' => '+221 77 123 45 67',
+            'date_prise_service' => '2024-01-15',
+            'g-recaptcha-response' => 'valid-token',
+        ]);
+
+        $response->assertSessionHasErrors('g-recaptcha-response');
     }
 
     public function test_admin_can_receptionner_demande_and_append_audit_comment(): void
