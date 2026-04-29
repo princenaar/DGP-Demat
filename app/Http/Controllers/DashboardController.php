@@ -5,23 +5,21 @@ namespace App\Http\Controllers;
 use App\Models\Demande;
 use App\Models\EtatDemande;
 use App\Models\TypeDocument;
-use App\Models\User;
-use App\Services\WorkflowEngine;
+use App\Services\DemandeBacklogService;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 use Yajra\DataTables\Facades\DataTables;
 
 class DashboardController extends Controller
 {
-    public function __construct(private WorkflowEngine $workflowEngine) {}
+    public function __construct(private DemandeBacklogService $backlogService) {}
 
     public function __invoke(Request $request): View
     {
         $user = $request->user();
-        $demandesScope = $this->demandesScope($user);
-        $demandesATraiter = $this->demandesATraiter($user);
+        $demandesScope = $this->backlogService->demandesScope($user);
+        $demandesATraiter = $this->backlogService->demandesATraiter($user);
 
         return view('dashboard', [
             'countsByEtat' => $this->countsByEtat($demandesScope),
@@ -33,7 +31,7 @@ class DashboardController extends Controller
 
     public function data(Request $request)
     {
-        $demandes = $this->demandesATraiter($request->user());
+        $demandes = $this->backlogService->demandesATraiter($request->user());
 
         return DataTables::of($demandes)
             ->addColumn('etat', fn (Demande $demande): string => $demande->etatDemande->nom)
@@ -42,19 +40,6 @@ class DashboardController extends Controller
             ->addColumn('actions', fn (Demande $demande): string => view('demandes.partials.actions', compact('demande'))->render())
             ->rawColumns(['actions'])
             ->make();
-    }
-
-    private function demandesScope(User $user): Builder
-    {
-        $query = Demande::query();
-
-        if ($user->hasRole('AGENT')) {
-            $query->where('agent_id', $user->id);
-        } elseif (! $user->hasAnyRole(['ADMIN', 'CHEF_DE_DIVISION', 'DRH'])) {
-            $query->whereRaw('1 = 0');
-        }
-
-        return $query;
     }
 
     /**
@@ -137,28 +122,5 @@ class DashboardController extends Controller
         }
 
         return round($averageSeconds / 86400, 1).' j';
-    }
-
-    /**
-     * @return Collection<int, Demande>
-     */
-    private function demandesATraiter(User $user): Collection
-    {
-        $roles = $user->getRoleNames();
-
-        if ($roles->isEmpty()) {
-            return new Collection;
-        }
-
-        return $this->demandesScope($user)
-            ->with('typeDocument', 'etatDemande', 'structure')
-            ->orderBy('created_at')
-            ->get()
-            ->filter(function (Demande $demande) use ($roles): bool {
-                return $this->workflowEngine
-                    ->transitionsFor($demande)
-                    ->contains(fn ($transition): bool => $transition->role_requis && $roles->contains($transition->role_requis));
-            })
-            ->values();
     }
 }
