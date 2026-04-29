@@ -15,6 +15,7 @@ use Database\Seeders\EtatDemandeSeeder;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Database\Seeders\StructureSeeder;
 use Database\Seeders\TypeDocumentSeeder;
+use Database\Seeders\WorkflowTransitionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\UploadedFile;
@@ -36,6 +37,7 @@ class DemandeWorkflowTest extends TestCase
             EtatDemandeSeeder::class,
             TypeDocumentSeeder::class,
             StructureSeeder::class,
+            WorkflowTransitionSeeder::class,
         ]);
 
         config([
