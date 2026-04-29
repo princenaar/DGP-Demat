@@ -27,7 +27,7 @@ class DemandeController extends Controller
 {
     public function create()
     {
-        $types = TypeDocument::all();
+        $types = TypeDocument::with('piecesRequises')->get();
         $structures = Structure::all();
         $categoriesSocioprofessionnelles = CategorieSocioprofessionnelle::orderBy('ordre')->get();
         $recaptchaSiteKey = config('services.recaptcha.site_key');
@@ -188,6 +188,8 @@ class DemandeController extends Controller
         if ($demande->etatDemande->nom !== EtatDemande::COMPLEMENTS) {
             abort(403, 'Cette demande ne peut pas être modifiée.');
         }
+
+        $demande->loadMissing('typeDocument.piecesRequises');
 
         $structures = Structure::all();
         $categoriesSocioprofessionnelles = CategorieSocioprofessionnelle::orderBy('ordre')->get();

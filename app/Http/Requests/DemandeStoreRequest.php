@@ -55,6 +55,8 @@ class DemandeStoreRequest extends FormRequest
         return [
             function (Validator $validator): void {
                 $this->validateTypeDocumentFields($validator);
+                $this->validateEligibility($validator);
+                $this->validateRequiredFiles($validator);
                 $this->validateRecaptcha($validator);
             },
         ];
@@ -96,7 +98,7 @@ class DemandeStoreRequest extends FormRequest
 
     private function validateTypeDocumentFields(Validator $validator): void
     {
-        $typeDocument = TypeDocument::find($this->input('type_document_id'));
+        $typeDocument = $this->typeDocument();
 
         if (! $typeDocument) {
             return;
@@ -108,6 +110,39 @@ class DemandeStoreRequest extends FormRequest
 
                 $validator->errors()->add($field, "Le champ {$attribute} est obligatoire pour ce type de document.");
             }
+        }
+    }
+
+    private function validateEligibility(Validator $validator): void
+    {
+        $typeDocument = $this->typeDocument();
+
+        if (! $typeDocument || blank($typeDocument->eligibilite)) {
+            return;
+        }
+
+        if ($this->input('statut') !== $typeDocument->eligibilite) {
+            $validator->errors()->add(
+                'statut',
+                'Le statut sélectionné ne correspond pas à l’éligibilité de ce type de document.'
+            );
+        }
+    }
+
+    private function validateRequiredFiles(Validator $validator): void
+    {
+        $typeDocument = $this->typeDocument();
+
+        if (! $typeDocument) {
+            return;
+        }
+
+        $hasRequiredPieces = $typeDocument->piecesRequises()
+            ->where('obligatoire', true)
+            ->exists();
+
+        if ($hasRequiredPieces && ! $this->hasFile('fichiers')) {
+            $validator->errors()->add('fichiers', 'Veuillez joindre les pièces obligatoires pour ce type de document.');
         }
     }
 
@@ -143,5 +178,10 @@ class DemandeStoreRequest extends FormRequest
         if (! $response->json('success', false)) {
             $validator->errors()->add('g-recaptcha-response', 'La vérification reCAPTCHA a échoué.');
         }
+    }
+
+    private function typeDocument(): ?TypeDocument
+    {
+        return TypeDocument::with('piecesRequises')->find($this->input('type_document_id'));
     }
 }

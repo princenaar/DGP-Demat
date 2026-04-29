@@ -2,8 +2,11 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Demande;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Str;
+use Illuminate\Validation\Validator;
 
 class DemandeUpdateRequest extends FormRequest
 {
@@ -41,5 +44,80 @@ class DemandeUpdateRequest extends FormRequest
             // Fichiers
             'fichiers.*' => ['nullable', 'file', 'max:5120'], // max 5Mo par fichier
         ];
+    }
+
+    public function after(): array
+    {
+        return [
+            function (Validator $validator): void {
+                $this->validateTypeDocumentFields($validator);
+                $this->validateEligibility($validator);
+                $this->validateRequiredFiles($validator);
+            },
+        ];
+    }
+
+    private function validateTypeDocumentFields(Validator $validator): void
+    {
+        $demande = $this->demande();
+        $typeDocument = $demande?->typeDocument;
+
+        if (! $typeDocument) {
+            return;
+        }
+
+        foreach ($typeDocument->champs_requis ?? [] as $field => $isRequired) {
+            $value = $this->has($field) ? $this->input($field) : $demande->{$field};
+
+            if ($isRequired && blank($value)) {
+                $attribute = Str::of($field)->replace('_', ' ')->value();
+
+                $validator->errors()->add($field, "Le champ {$attribute} est obligatoire pour ce type de document.");
+            }
+        }
+    }
+
+    private function validateEligibility(Validator $validator): void
+    {
+        $typeDocument = $this->demande()?->typeDocument;
+
+        if (! $typeDocument || blank($typeDocument->eligibilite)) {
+            return;
+        }
+
+        if ($this->input('statut') !== $typeDocument->eligibilite) {
+            $validator->errors()->add(
+                'statut',
+                'Le statut sélectionné ne correspond pas à l’éligibilité de ce type de document.'
+            );
+        }
+    }
+
+    private function validateRequiredFiles(Validator $validator): void
+    {
+        $demande = $this->demande();
+        $typeDocument = $demande?->typeDocument;
+
+        if (! $demande || ! $typeDocument) {
+            return;
+        }
+
+        $hasRequiredPieces = $typeDocument->piecesRequises()
+            ->where('obligatoire', true)
+            ->exists();
+
+        if (! $hasRequiredPieces) {
+            return;
+        }
+
+        if (! $this->hasFile('fichiers') && $demande->justificatifs()->doesntExist()) {
+            $validator->errors()->add('fichiers', 'Veuillez joindre les pièces obligatoires pour ce type de document.');
+        }
+    }
+
+    private function demande(): ?Demande
+    {
+        return Demande::with(['typeDocument.piecesRequises', 'justificatifs'])
+            ->find($this->input('id'));
     }
 }

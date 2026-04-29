@@ -7,10 +7,12 @@ use App\Mail\DemandeSigneeMail;
 use App\Models\Demande;
 use App\Models\EtatDemande;
 use App\Models\FichierJustificatif;
+use App\Models\PieceRequise;
 use App\Models\Structure;
 use App\Models\TypeDocument;
 use App\Models\User;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Database\Seeders\CategorieSocioprofessionnelleSeeder;
 use Database\Seeders\EtatDemandeSeeder;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Database\Seeders\StructureSeeder;
@@ -37,6 +39,7 @@ class DemandeWorkflowTest extends TestCase
             EtatDemandeSeeder::class,
             TypeDocumentSeeder::class,
             StructureSeeder::class,
+            CategorieSocioprofessionnelleSeeder::class,
             WorkflowTransitionSeeder::class,
         ]);
 
@@ -55,6 +58,7 @@ class DemandeWorkflowTest extends TestCase
             ->assertViewIs('demandes.create')
             ->assertViewHas('types')
             ->assertViewHas('structures')
+            ->assertViewHas('categoriesSocioprofessionnelles')
             ->assertViewHas('recaptchaSiteKey')
             ->assertSee('g-recaptcha', false)
             ->assertSee('Rechercher une structure')
@@ -256,6 +260,83 @@ class DemandeWorkflowTest extends TestCase
         ]);
 
         $response->assertSessionHasErrors('g-recaptcha-response');
+    }
+
+    public function test_store_demande_rejects_statut_that_does_not_match_type_eligibility(): void
+    {
+        $type = TypeDocument::where('code', 'ANA')->firstOrFail();
+        $structure = Structure::firstOrFail();
+        Http::fake([
+            'www.google.com/recaptcha/api/siteverify' => Http::response(['success' => true]),
+        ]);
+
+        $response = $this->post(route('demandes.store'), [
+            'type_document_id' => $type->id,
+            'nom' => 'Diop',
+            'prenom' => 'Awa',
+            'statut' => 'contractuel',
+            'nin' => '1234567890123',
+            'structure_id' => $structure->id,
+            'email' => 'awa.diop@example.test',
+            'telephone' => '+221 77 123 45 67',
+            'date_depart_retraite' => '2024-01-15',
+            'g-recaptcha-response' => 'valid-token',
+        ]);
+
+        $response->assertSessionHasErrors('statut');
+    }
+
+    public function test_store_demande_requires_categorie_id_for_types_that_need_it(): void
+    {
+        $type = TypeDocument::where('code', 'AFM')->firstOrFail();
+        $structure = Structure::firstOrFail();
+        Http::fake([
+            'www.google.com/recaptcha/api/siteverify' => Http::response(['success' => true]),
+        ]);
+
+        $response = $this->post(route('demandes.store'), [
+            'type_document_id' => $type->id,
+            'nom' => 'Diop',
+            'prenom' => 'Awa',
+            'statut' => 'contractuel',
+            'nin' => '1234567890123',
+            'structure_id' => $structure->id,
+            'email' => 'awa.diop@example.test',
+            'telephone' => '+221 77 123 45 67',
+            'g-recaptcha-response' => 'valid-token',
+        ]);
+
+        $response->assertSessionHasErrors('categorie_socioprofessionnelle_id');
+    }
+
+    public function test_store_demande_requires_upload_when_type_has_required_pieces(): void
+    {
+        $type = TypeDocument::where('code', 'TRV')->firstOrFail();
+        $structure = Structure::firstOrFail();
+        PieceRequise::create([
+            'type_document_id' => $type->id,
+            'libelle' => 'Copie de la pièce d’identité',
+            'obligatoire' => true,
+            'ordre' => 1,
+        ]);
+        Http::fake([
+            'www.google.com/recaptcha/api/siteverify' => Http::response(['success' => true]),
+        ]);
+
+        $response = $this->post(route('demandes.store'), [
+            'type_document_id' => $type->id,
+            'nom' => 'Diop',
+            'prenom' => 'Awa',
+            'statut' => 'contractuel',
+            'nin' => '1234567890123',
+            'structure_id' => $structure->id,
+            'email' => 'awa.diop@example.test',
+            'telephone' => '+221 77 123 45 67',
+            'date_prise_service' => '2024-01-15',
+            'g-recaptcha-response' => 'valid-token',
+        ]);
+
+        $response->assertSessionHasErrors('fichiers');
     }
 
     public function test_admin_can_receptionner_demande_and_append_audit_comment(): void
