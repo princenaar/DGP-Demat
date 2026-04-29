@@ -120,7 +120,7 @@ class DomainObjectsTest extends TestCase
         $demande = $this->makeDemande();
         $mail = new DemandeComplementMail($demande, 'https://example.test/complement');
 
-        $this->assertSame('Demande Complement Mail', $mail->envelope()->subject);
+        $this->assertSame('Demande de compléments', $mail->envelope()->subject);
         $this->assertSame('emails.demande.complements', $mail->content()->markdown);
         $this->assertSame($demande, $mail->content()->with['demande']);
         $this->assertSame('https://example.test/complement', $mail->content()->with['url']);

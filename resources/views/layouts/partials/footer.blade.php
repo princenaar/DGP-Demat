@@ -57,6 +57,7 @@
     @endguest
     <div class="border-t border-gray-800 py-4">
         <div class="container mx-auto px-4 text-center text-sm text-gray-400">
+            <p class="mb-1">Portail de dématérialisation des actes administratifs.</p>
             <p>&copy; {{ date('Y') }} Ministère de la Santé et de l'Hygiène publique — Direction des Ressources Humaines. Tous droits réservés.</p>
             <p class="mt-1">Version {{ config('app.version', '1.0.0') }} — <a href="https://princenaar.github.io">Développé par Cheikh Abdou Lahad Diagne</a>.</p>
         </div>
