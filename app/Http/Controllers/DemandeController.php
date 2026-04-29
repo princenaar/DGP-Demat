@@ -6,6 +6,7 @@ use App\Http\Requests\DemandeStoreRequest;
 use App\Http\Requests\DemandeUpdateRequest;
 use App\Mail\DemandeComplementMail;
 use App\Mail\DemandeSigneeMail;
+use App\Models\CategorieSocioprofessionnelle;
 use App\Models\Demande;
 use App\Models\EtatDemande;
 use App\Models\FichierJustificatif;
@@ -32,9 +33,10 @@ class DemandeController extends Controller
     {
         $types = TypeDocument::all();
         $structures = Structure::all();
+        $categoriesSocioprofessionnelles = CategorieSocioprofessionnelle::orderBy('ordre')->get();
         $recaptchaSiteKey = config('services.recaptcha.site_key');
 
-        return view('demandes.create', compact('types', 'structures', 'recaptchaSiteKey'));
+        return view('demandes.create', compact('types', 'structures', 'categoriesSocioprofessionnelles', 'recaptchaSiteKey'));
     }
 
     /**
@@ -57,7 +59,7 @@ class DemandeController extends Controller
                 'telephone' => $request->telephone,
                 'statut' => $request->statut,
 
-                'categorie_socioprofessionnelle' => $request->categorie_socioprofessionnelle,
+                'categorie_socioprofessionnelle_id' => $request->categorie_socioprofessionnelle_id,
                 'date_prise_service' => $request->date_prise_service,
                 'date_fin_service' => $request->date_fin_service,
                 'date_depart_retraite' => $request->date_depart_retraite,
@@ -228,8 +230,9 @@ class DemandeController extends Controller
         }
 
         $structures = Structure::all();
+        $categoriesSocioprofessionnelles = CategorieSocioprofessionnelle::orderBy('ordre')->get();
 
-        return view('demandes.edit', compact('demande', 'structures'));
+        return view('demandes.edit', compact('demande', 'structures', 'categoriesSocioprofessionnelles'));
     }
 
     /**

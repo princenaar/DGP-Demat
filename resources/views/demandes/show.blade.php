@@ -77,7 +77,7 @@
                         </div>
                         <div>
                             <dt class="text-sm font-medium text-ink-700">Catégorie socioprofessionnelle</dt>
-                            <dd class="text-ink-900">{{ $demande->categorie_socioprofessionnelle ?? 'N/A' }}</dd>
+                            <dd class="text-ink-900">{{ $demande->categorieSocioprofessionnelle?->libelle ?? 'N/A' }}</dd>
                         </div>
                         @if($demande->date_naissance)
                             <div>

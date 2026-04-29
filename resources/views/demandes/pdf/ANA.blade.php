@@ -9,7 +9,7 @@
 @section('content')
     <p>
         Je soussigné, Monsieur le Directeur des Ressources humaines, atteste que <strong>M./Mme {{ $demande->prenom }}
-            {{ $demande->nom }}</strong>, {{ $demande->categorie_socioprofessionnelle }}
+            {{ $demande->nom }}</strong>, {{ $demande->categorieSocioprofessionnelle?->libelle }}
         , @if($demande->statut === 'contractuel')
             contractuel,
         @elseif($demande->statut === 'étatique')

@@ -95,10 +95,15 @@
                         </div>
                     </div>
 
-                    <div x-show="visible('categorie_socioprofessionnelle')" x-cloak>
-                        <x-input-label for="categorie_socioprofessionnelle" value="Catégorie socio-professionnelle" />
-                        <x-text-input type="text" name="categorie_socioprofessionnelle" id="categorie_socioprofessionnelle" class="mt-1 block w-full" :value="old('categorie_socioprofessionnelle', $demande->categorie_socioprofessionnelle)" x-bind:required="required('categorie_socioprofessionnelle')" />
-                        <x-input-error :messages="$errors->get('categorie_socioprofessionnelle')" class="mt-2" />
+                    <div x-show="visible('categorie_socioprofessionnelle_id')" x-cloak>
+                        <x-input-label for="categorie_socioprofessionnelle_id" value="Catégorie socio-professionnelle" />
+                        <select name="categorie_socioprofessionnelle_id" id="categorie_socioprofessionnelle_id" class="mt-1 block w-full rounded-md border-gray-300 focus:border-senegal-green focus:ring-senegal-green" x-bind:required="required('categorie_socioprofessionnelle_id')">
+                            <option value="">Sélectionner une catégorie</option>
+                            @foreach($categoriesSocioprofessionnelles as $categorie)
+                                <option value="{{ $categorie->id }}" @selected((string) old('categorie_socioprofessionnelle_id', $demande->categorie_socioprofessionnelle_id) === (string) $categorie->id)>{{ $categorie->libelle }}</option>
+                            @endforeach
+                        </select>
+                        <x-input-error :messages="$errors->get('categorie_socioprofessionnelle_id')" class="mt-2" />
                     </div>
 
                     <div class="grid grid-cols-1 gap-5 sm:grid-cols-3">

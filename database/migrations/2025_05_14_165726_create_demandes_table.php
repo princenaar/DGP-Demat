@@ -4,7 +4,8 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration {
+return new class extends Migration
+{
     /**
      * Run the migrations.
      */
@@ -26,8 +27,11 @@ return new class extends Migration {
             $table->foreignId('type_document_id')->constrained('type_documents')->onDelete('restrict');
             $table->foreignId('structure_id')->nullable()->constrained('structures')->onDelete('set null');
             $table->foreignId('etat_demande_id')->constrained('etat_demandes')->onDelete('restrict');
+            $table->foreignId('categorie_socioprofessionnelle_id')
+                ->nullable()
+                ->constrained('categories_socioprofessionnelles')
+                ->restrictOnDelete();
 
-            $table->string('categorie_socioprofessionnelle')->nullable();
             $table->date('date_prise_service')->nullable();
             $table->date('date_fin_service')->nullable();
             $table->date('date_depart_retraite')->nullable();
@@ -40,7 +44,6 @@ return new class extends Migration {
             $table->timestamps();
         });
     }
-
 
     /**
      * Reverse the migrations.

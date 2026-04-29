@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 
 class DemandeUpdateRequest extends FormRequest
@@ -17,7 +18,7 @@ class DemandeUpdateRequest extends FormRequest
     /**
      * Get the validation rules that apply to the request.
      *
-     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
+     * @return array<string, ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {
@@ -32,7 +33,7 @@ class DemandeUpdateRequest extends FormRequest
             'telephone' => ['nullable', 'string', 'max:15'],
 
             // Champs conditionnels potentiels
-            'categorie_socioprofessionnelle' => ['nullable', 'string'],
+            'categorie_socioprofessionnelle_id' => ['nullable', 'exists:categories_socioprofessionnelles,id'],
             'date_prise_service' => ['nullable', 'date'],
             'date_fin_service' => ['nullable', 'date'],
             'date_depart_retraite' => ['nullable', 'date'],

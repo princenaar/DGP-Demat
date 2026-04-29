@@ -39,7 +39,7 @@ class DemandeStoreRequest extends FormRequest
             'email' => ['required', 'email:rfc', 'max:255'],
             'telephone' => ['required', 'regex:/^\+221 [0-9]{2} [0-9]{3} [0-9]{2} [0-9]{2}$/'],
 
-            'categorie_socioprofessionnelle' => ['nullable', 'string', 'max:150'],
+            'categorie_socioprofessionnelle_id' => ['nullable', 'exists:categories_socioprofessionnelles,id'],
             'date_prise_service' => ['nullable', 'date'],
             'date_fin_service' => ['nullable', 'date', 'after_or_equal:date_prise_service'],
             'date_depart_retraite' => ['nullable', 'date'],
@@ -89,7 +89,7 @@ class DemandeStoreRequest extends FormRequest
             'date_prise_service' => 'date de prise de service',
             'date_fin_service' => 'date de fin de service',
             'date_depart_retraite' => 'date de départ à la retraite',
-            'categorie_socioprofessionnelle' => 'catégorie socio-professionnelle',
+            'categorie_socioprofessionnelle_id' => 'catégorie socio-professionnelle',
             'fichiers.*' => 'fichier',
         ];
     }

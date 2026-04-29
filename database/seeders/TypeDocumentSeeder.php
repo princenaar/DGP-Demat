@@ -14,8 +14,11 @@ class TypeDocumentSeeder extends Seeder
                 'nom' => 'Attestation de fonds de motivation',
                 'code' => 'AFM',
                 'champs_requis' => [
-                    'categorie_socioprofessionnelle' => true,
+                    'categorie_socioprofessionnelle_id' => true,
                 ],
+                'eligibilite' => null,
+                'description' => 'Demande liée aux fonds de motivation.',
+                'icone' => 'banknotes',
             ],
             [
                 'nom' => 'Attestation de travail',
@@ -23,6 +26,9 @@ class TypeDocumentSeeder extends Seeder
                 'champs_requis' => [
                     'date_prise_service' => true,
                 ],
+                'eligibilite' => null,
+                'description' => 'Attestation confirmant la situation de travail actuelle.',
+                'icone' => 'briefcase',
             ],
             [
                 'nom' => 'Certificat administratif',
@@ -30,6 +36,9 @@ class TypeDocumentSeeder extends Seeder
                 'champs_requis' => [
                     'date_prise_service' => true,
                 ],
+                'eligibilite' => null,
+                'description' => 'Certificat administratif de présence en service.',
+                'icone' => 'document-text',
             ],
             [
                 'nom' => 'Certificat de travail',
@@ -38,6 +47,9 @@ class TypeDocumentSeeder extends Seeder
                     'date_prise_service' => true,
                     'date_fin_service' => true,
                 ],
+                'eligibilite' => null,
+                'description' => 'Certificat couvrant une période de travail terminée.',
+                'icone' => 'clipboard-document-check',
             ],
             [
                 'nom' => 'Attestation de non activité dans la fonction publique',
@@ -45,15 +57,17 @@ class TypeDocumentSeeder extends Seeder
                 'champs_requis' => [
                     'date_depart_retraite' => true,
                 ],
+                'eligibilite' => 'etatique',
+                'description' => 'Attestation réservée aux agents étatiques retraités.',
+                'icone' => 'shield-check',
             ],
         ];
 
         foreach ($documents as $doc) {
-            TypeDocument::firstOrCreate([
-                'nom' => $doc['nom'],
-                'code' => $doc['code'],
-                'champs_requis' => $doc['champs_requis'],
-            ]);
+            TypeDocument::updateOrCreate(
+                ['code' => $doc['code']],
+                $doc
+            );
         }
     }
 }

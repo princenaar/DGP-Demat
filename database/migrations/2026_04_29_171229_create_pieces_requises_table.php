@@ -11,15 +11,13 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('type_documents', function (Blueprint $table) {
+        Schema::create('pieces_requises', function (Blueprint $table) {
             $table->id();
-            $table->string('nom');
-            $table->string('code')->nullable()->unique();
-            $table->json('champs_requis')->nullable();
-            $table->string('eligibilite')->nullable();
-            $table->foreignId('default_agent_id')->nullable()->constrained('users')->nullOnDelete();
+            $table->foreignId('type_document_id')->constrained('type_documents')->cascadeOnDelete();
+            $table->string('libelle');
             $table->text('description')->nullable();
-            $table->string('icone')->nullable();
+            $table->boolean('obligatoire')->default(true);
+            $table->unsignedInteger('ordre')->default(0);
             $table->timestamps();
         });
     }
@@ -29,6 +27,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('type_documents');
+        Schema::dropIfExists('pieces_requises');
     }
 };

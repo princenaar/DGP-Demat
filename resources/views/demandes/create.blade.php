@@ -218,10 +218,15 @@
                         </div>
                     </div>
 
-                    <div x-show="visible('categorie_socioprofessionnelle')" x-cloak>
-                        <label for="categorie_socioprofessionnelle" class="block text-sm font-medium text-gray-700">Catégorie socio-professionnelle <span class="text-red-600" aria-hidden="true" x-text="requiredLabel('categorie_socioprofessionnelle')"></span></label>
-                        <x-text-input type="text" name="categorie_socioprofessionnelle" id="categorie_socioprofessionnelle" class="mt-1 block w-full" x-bind:class="fieldClass('categorie_socioprofessionnelle')" :value="old('categorie_socioprofessionnelle')" x-on:input="clearFieldState('categorie_socioprofessionnelle')" x-on:blur="validateField('categorie_socioprofessionnelle', $event.target)" x-bind:required="required('categorie_socioprofessionnelle')" />
-                        <x-input-error :messages="$errors->get('categorie_socioprofessionnelle')" class="mt-2 rounded bg-red-50 px-3 py-2" />
+                    <div x-show="visible('categorie_socioprofessionnelle_id')" x-cloak>
+                        <label for="categorie_socioprofessionnelle_id" class="block text-sm font-medium text-gray-700">Catégorie socio-professionnelle <span class="text-red-600" aria-hidden="true" x-text="requiredLabel('categorie_socioprofessionnelle_id')"></span></label>
+                        <select name="categorie_socioprofessionnelle_id" id="categorie_socioprofessionnelle_id" class="mt-1 block w-full rounded-md border-gray-300 focus:border-senegal-green focus:ring-senegal-green" x-bind:class="fieldClass('categorie_socioprofessionnelle_id')" x-on:input="clearFieldState('categorie_socioprofessionnelle_id')" x-on:blur="validateField('categorie_socioprofessionnelle_id', $event.target)" x-bind:required="required('categorie_socioprofessionnelle_id')">
+                            <option value="">Sélectionner une catégorie</option>
+                            @foreach($categoriesSocioprofessionnelles as $categorie)
+                                <option value="{{ $categorie->id }}" @selected((string) old('categorie_socioprofessionnelle_id') === (string) $categorie->id)>{{ $categorie->libelle }}</option>
+                            @endforeach
+                        </select>
+                        <x-input-error :messages="$errors->get('categorie_socioprofessionnelle_id')" class="mt-2 rounded bg-red-50 px-3 py-2" />
                     </div>
 
                     <div class="grid grid-cols-1 gap-5 sm:grid-cols-3">

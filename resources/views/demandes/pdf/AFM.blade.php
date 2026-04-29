@@ -83,7 +83,7 @@
         <p>
             Je soussignée, Monsieur le Directeur des Ressources humaines, atteste que Mme/M.
             <strong>{{ $demande->prenom }}</strong> <strong>{{ strtoupper($demande->nom) }}</strong>,
-            {{ $demande->categorie_socioprofessionnelle }}, @if($demande->statut === 'contractuel')
+            {{ $demande->categorieSocioprofessionnelle?->libelle }}, @if($demande->statut === 'contractuel')
                 contractuel,
             @elseif($demande->statut === 'étatique')
                 matricule de solde n° <strong>{{ $demande->matricule }},</strong>
