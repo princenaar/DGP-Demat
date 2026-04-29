@@ -25,6 +25,8 @@ Homestead.json
 /.phpunit.cache
 /node_modules
 /public/build
+/public/build.zip
+/public/*.zip
 /public/hot
 /public/storage
 /storage/*.key
