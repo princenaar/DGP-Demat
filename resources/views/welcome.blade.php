@@ -96,7 +96,7 @@
                         </div>
                         <div class="px-5 py-4">
                             <p class="text-[11px] font-medium uppercase tracking-wider text-ink-500">Attestation de travail</p>
-                            <p class="mt-1 text-sm font-semibold text-ink-900">N° 2026 / DRH / 04217</p>
+                            <p class="mt-1 text-sm font-semibold text-ink-900">N° 2026 / DRH / 01602</p>
                             <div class="mt-4 space-y-1.5">
                                 <div class="h-1.5 w-full rounded bg-ink-900/10"></div>
                                 <div class="h-1.5 w-11/12 rounded bg-ink-900/10"></div>
@@ -106,7 +106,7 @@
                             <div class="mt-5 flex items-end justify-between">
                                 <div>
                                     <p class="text-[10px] uppercase tracking-wider text-ink-500">Signé le</p>
-                                    <p class="text-xs font-semibold text-ink-900">30 / 04 / 2026</p>
+                                    <p class="text-xs font-semibold text-ink-900">05 / 05 / 2026</p>
                                 </div>
                                 {{-- QR placeholder built from a 5x5 grid --}}
                                 <div class="grid h-16 w-16 grid-cols-5 grid-rows-5 gap-px rounded-md bg-ink-900 p-1.5">

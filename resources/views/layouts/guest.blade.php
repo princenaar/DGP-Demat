@@ -16,19 +16,18 @@
     </head>
     <body class="font-sans text-gray-900 antialiased min-h-screen flex flex-col">
         @include('layouts.partials.gov-strip')
-        @php
-            $guestNav = '
-                <nav class="flex space-x-6 text-sm">
-                    <a href="' . url('/') . '" class="text-ink-700 hover:text-senegal-green font-medium">Accueil</a>
-                    <a href="' . route('demandes.create') . '" class="text-ink-700 hover:text-senegal-green font-medium">Faire une demande</a>
-                    <a href="' . url('/#verification') . '" class="text-ink-700 hover:text-senegal-green font-medium">Vérifier un acte</a>
-                </nav>
-            ';
-        @endphp
-        @include('layouts.partials.institutional-header', ['nav' => $guestNav])
+        @include('layouts.partials.institutional-header')
 
         <div class="flex-1 flex flex-col sm:justify-center items-center pt-6 sm:pt-0 bg-paper">
-            <div class="w-full sm:max-w-md mt-6 px-6 py-8 bg-white shadow-lg overflow-hidden sm:rounded-lg border border-gray-200">
+            <div class="w-full sm:max-w-md px-6 mt-6">
+                <a href="{{ url('/') }}" class="inline-flex items-center text-sm text-ink-700 hover:text-senegal-green font-medium transition-colors">
+                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                    </svg>
+                    Retour à l'accueil
+                </a>
+            </div>
+            <div class="w-full sm:max-w-md mt-3 px-6 py-8 bg-white shadow-lg overflow-hidden sm:rounded-lg border border-gray-200">
                 {{ $slot }}
             </div>
         </div>

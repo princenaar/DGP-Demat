@@ -20,6 +20,11 @@
         $linkClass = 'inline-flex items-center border-b-2 px-1 pt-1 text-sm font-medium transition ';
         $inactiveClass = 'border-transparent text-ink-700 hover:border-senegal-green hover:text-senegal-green';
         $activeClass = 'border-senegal-green text-senegal-green';
+        $mobileBase = 'block px-4 py-3 text-base text-ink-700 hover:bg-ink-100 hover:text-senegal-green border-b border-ink-100 transition-colors';
+        $mobileActive = 'block px-4 py-3 text-base font-semibold text-senegal-green bg-ink-100 border-b border-ink-100 border-l-4 border-l-senegal-green';
+        $logoutDesktop = 'inline-flex items-center px-4 py-2 rounded-full border-2 border-senegal-red text-senegal-red font-semibold hover:bg-senegal-red hover:text-white transition';
+        $logoutMobile = 'block w-full text-center px-4 py-3 rounded-full border-2 border-senegal-red text-senegal-red font-semibold hover:bg-senegal-red hover:text-white transition';
+
         $authNav = '<nav class="hidden md:flex items-center gap-6">';
         $authNav .= '<a href="' . route('demandes.index') . '" class="' . $linkClass . (request()->routeIs('demandes.index') ? $activeClass : $inactiveClass) . '">Mes demandes</a>';
 
@@ -28,10 +33,21 @@
         }
 
         $authNav .= '<a href="' . route('profile.edit') . '" class="' . $linkClass . (request()->routeIs('profile.edit') ? $activeClass : $inactiveClass) . '">Profil</a>';
-        $authNav .= '<form method="POST" action="' . route('logout') . '">' . csrf_field() . '<button type="submit" class="text-sm font-medium text-ink-700 hover:text-senegal-red transition">Déconnexion</button></form>';
+        $authNav .= '<form method="POST" action="' . route('logout') . '">' . csrf_field() . '<button type="submit" class="' . $logoutDesktop . '">Déconnexion</button></form>';
         $authNav .= '</nav>';
+
+        $authNavMobile = '<nav class="flex flex-col">';
+        $authNavMobile .= '<a href="' . route('demandes.index') . '" class="' . (request()->routeIs('demandes.index') ? $mobileActive : $mobileBase) . '">Mes demandes</a>';
+
+        if (auth()->user()->hasRole('ADMIN')) {
+            $authNavMobile .= '<a href="' . route('users.index') . '" class="' . (request()->routeIs('users.index') ? $mobileActive : $mobileBase) . '">Utilisateurs</a>';
+        }
+
+        $authNavMobile .= '<a href="' . route('profile.edit') . '" class="' . (request()->routeIs('profile.edit') ? $mobileActive : $mobileBase) . '">Profil</a>';
+        $authNavMobile .= '<form method="POST" action="' . route('logout') . '" class="p-4">' . csrf_field() . '<button type="submit" class="' . $logoutMobile . '">Déconnexion</button></form>';
+        $authNavMobile .= '</nav>';
     @endphp
-    @include('layouts.partials.institutional-header', ['nav' => $authNav])
+    @include('layouts.partials.institutional-header', ['nav' => $authNav, 'navMobile' => $authNavMobile])
 
     <main class="flex-1 container mx-auto px-4 py-6">
         @hasSection('header')
