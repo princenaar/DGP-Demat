@@ -38,4 +38,25 @@ class AdminUserTest extends TestCase
         $this->actingAs($user)->get(route('users.index'))
             ->assertForbidden();
     }
+
+    public function test_admin_can_see_users_navigation_link(): void
+    {
+        $admin = User::factory()->create();
+        $admin->assignRole('ADMIN');
+
+        $this->actingAs($admin)->get(route('demandes.index'))
+            ->assertOk()
+            ->assertSee('Utilisateurs')
+            ->assertSee(route('users.index'));
+    }
+
+    public function test_non_admin_cannot_see_users_navigation_link(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)->get(route('demandes.index'))
+            ->assertOk()
+            ->assertDontSee('Utilisateurs')
+            ->assertDontSee(route('users.index'));
+    }
 }

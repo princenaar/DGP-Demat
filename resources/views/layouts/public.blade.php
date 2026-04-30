@@ -23,6 +23,7 @@
         $mobileActive = 'block px-4 py-3 text-base font-semibold text-senegal-green bg-ink-100 border-b border-ink-100 border-l-4 border-l-senegal-green';
         $ctaDesktop = 'inline-flex items-center px-4 py-2 rounded-full bg-senegal-green text-white font-semibold shadow-sm hover:opacity-90 transition';
         $ctaMobile = 'block text-center px-4 py-3 rounded-full bg-senegal-green text-white font-semibold shadow-sm hover:opacity-90 transition';
+        $adminSpaceUrl = auth()->check() ? route('dashboard') : route('login');
         $isHome = request()->path() === '/';
         $isCreate = request()->routeIs('demandes.create');
         $isLogin = request()->routeIs('login');
@@ -31,7 +32,7 @@
                 <a href="' . url('/') . '" class="' . ($isHome ? $navActive : $navBase) . '">Accueil</a>
                 <a href="' . route('demandes.create') . '" class="' . ($isCreate ? $navActive : $navBase) . '">Faire une demande</a>
                 <a href="' . url('/#verification') . '" class="' . $navBase . '">Vérifier un acte</a>
-                <a href="' . route('login') . '" class="' . $ctaDesktop . '">Espace administrateur</a>
+                <a href="' . $adminSpaceUrl . '" class="' . $ctaDesktop . '">Espace administrateur</a>
             </nav>
         ';
         $publicNavMobile = '
@@ -40,7 +41,7 @@
                 <a href="' . route('demandes.create') . '" class="' . ($isCreate ? $mobileActive : $mobileBase) . '">Faire une demande</a>
                 <a href="' . url('/#verification') . '" class="' . $mobileBase . '">Vérifier un acte</a>
                 <div class="p-4">
-                    <a href="' . route('login') . '" class="' . $ctaMobile . '">Espace administrateur</a>
+                    <a href="' . $adminSpaceUrl . '" class="' . $ctaMobile . '">Espace administrateur</a>
                 </div>
             </nav>
         ';
