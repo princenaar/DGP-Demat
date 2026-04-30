@@ -4,8 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\DemandeStoreRequest;
 use App\Http\Requests\DemandeUpdateRequest;
-use App\Mail\DemandeComplementMail;
-use App\Mail\DemandeSigneeMail;
+use App\Models\CategorieSocioprofessionnelle;
 use App\Models\Demande;
 use App\Models\EtatDemande;
 use App\Models\FichierJustificatif;
@@ -13,14 +12,12 @@ use App\Models\Structure;
 use App\Models\TypeDocument;
 use App\Models\User;
 use App\Services\DemandeMailService;
+use App\Services\WorkflowEngine;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\URL;
-use Illuminate\Support\Str;
 use Illuminate\View\View;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
 use Throwable;
@@ -30,11 +27,12 @@ class DemandeController extends Controller
 {
     public function create()
     {
-        $types = TypeDocument::all();
+        $types = TypeDocument::with('piecesRequises')->get();
         $structures = Structure::all();
+        $categoriesSocioprofessionnelles = CategorieSocioprofessionnelle::orderBy('ordre')->get();
         $recaptchaSiteKey = config('services.recaptcha.site_key');
 
-        return view('demandes.create', compact('types', 'structures', 'recaptchaSiteKey'));
+        return view('demandes.create', compact('types', 'structures', 'categoriesSocioprofessionnelles', 'recaptchaSiteKey'));
     }
 
     /**
@@ -57,7 +55,7 @@ class DemandeController extends Controller
                 'telephone' => $request->telephone,
                 'statut' => $request->statut,
 
-                'categorie_socioprofessionnelle' => $request->categorie_socioprofessionnelle,
+                'categorie_socioprofessionnelle_id' => $request->categorie_socioprofessionnelle_id,
                 'date_prise_service' => $request->date_prise_service,
                 'date_fin_service' => $request->date_fin_service,
                 'date_depart_retraite' => $request->date_depart_retraite,
@@ -131,88 +129,52 @@ class DemandeController extends Controller
             ->make();
     }
 
-    public function changerEtat(Request $request, Demande $demande)
+    public function changerEtat(Request $request, Demande $demande, WorkflowEngine $workflowEngine)
     {
-        $request->validate([
+        $validated = $request->validate([
             'nouvel_etat' => 'required|string',
             'commentaire' => 'required|string',
             'agent_id' => 'nullable|exists:users,id',
         ]);
 
-        $ancienCommentaire = $demande->commentaire ?? '';
-        $nouveauCommentaire = now()->format('d/m/Y H:i').' - '.auth()->user()->name.' : '.$request->commentaire;
-        $demande->commentaire = trim($ancienCommentaire."\n".$nouveauCommentaire);
+        $etatFinal = EtatDemande::where('nom', $validated['nouvel_etat'])->first();
 
-        $etatInitial = $demande->etatDemande;
-        $etatFinal = $request->nouvel_etat;
-
-        // Vérification et logique métier si besoin ici
-        $transitionsValides = [
-            EtatDemande::EN_ATTENTE => [EtatDemande::RECEPTIONNEE],
-            EtatDemande::RECEPTIONNEE => [EtatDemande::VALIDEE, EtatDemande::REFUSEE],
-            EtatDemande::VALIDEE => [EtatDemande::COMPLEMENTS, EtatDemande::EN_SIGNATURE],
-            EtatDemande::EN_SIGNATURE => [EtatDemande::SIGNEE, EtatDemande::SUSPENDUE],
-        ];
-
-        if (! isset($transitionsValides[$etatInitial->nom]) || ! in_array($etatFinal, $transitionsValides[$etatInitial->nom])) {
+        if (! $etatFinal) {
             return back()->withErrors(['Transition invalide.']);
         }
 
-        // Gestion des rôles et actions spécifiques
-        switch ($etatFinal) {
-            case EtatDemande::VALIDEE:
-                $demande->agent_id = $request->agent_id;
-                break;
+        $transitionExiste = $workflowEngine->transitionsFor($demande)
+            ->contains(fn ($transition): bool => $transition->etat_cible_id === $etatFinal->id);
 
-            case EtatDemande::COMPLEMENTS:
-                // Vérification que l'utilisateur est l'agent assigné à la demande
-                if (auth()->id() !== $demande->agent_id) {
-                    abort(403, 'Action non autorisée.');
-                }
-
-                // Générer un lien temporaire vers demande.edit (valable 3 jours)
-                $lien = URL::temporarySignedRoute(
-                    'demandes.edit',
-                    now()->addDays(3),
-                    ['demande' => $demande->id]
-                );
-
-                // Envoyer un mail au demandeur
-                Mail::to($demande->email)->send(new DemandeComplementMail($demande, $lien));
-                break;
-
-            case EtatDemande::EN_SIGNATURE:
-
-                break;
-
-            case EtatDemande::SIGNEE:
-                // Génération du PDF final + envoi par mail
-                // 1. Générer un code aléatoire unique
-                $code = Str::random(40);
-                $demande->code_qr = $code;
-                // 2.Créer le PDF
-                $pdf = $this->generatePDF($demande);
-
-                // 3. Enregistrer le PDF
-                $pdfPath = 'demandes_signees/Demande_'.$demande->id.'.pdf';
-                $demande->fichier_pdf = $pdfPath;
-                Storage::disk('local')->put($pdfPath, $pdf);
-
-                // 5. Envoyer le mail avec le PDF en pièce jointe
-                Mail::to($demande->email)->send(new DemandeSigneeMail($demande, $pdfPath));
-                break;
-
-            case EtatDemande::SUSPENDUE:
-                // Notification au demandeur
-                break;
+        if (! $transitionExiste) {
+            return back()->withErrors(['Transition invalide.']);
         }
 
-        $etatFinalModel = EtatDemande::where('nom', $etatFinal)->first();
-        $demande->etat_demande_id = $etatFinalModel->id;
-        $demande->save();
+        $workflowEngine->transitionner($demande, $etatFinal, $request->user(), $validated);
 
         return redirect()->route('demandes.show', $demande)->with([
             'success' => 'État modifié avec succès.',
+        ]);
+    }
+
+    public function imputer(Request $request, Demande $demande, WorkflowEngine $workflowEngine): RedirectResponse
+    {
+        $validated = $request->validate([
+            'agent_id' => ['required', 'exists:users,id'],
+            'commentaire' => ['nullable', 'string'],
+        ]);
+
+        $agent = User::role('AGENT')->findOrFail($validated['agent_id']);
+
+        $workflowEngine->imputer(
+            $demande,
+            $agent,
+            $request->user(),
+            $validated['commentaire'] ?? null
+        );
+
+        return redirect()->route('demandes.show', $demande)->with([
+            'success' => 'Demande imputée avec succès.',
         ]);
     }
 
@@ -227,9 +189,12 @@ class DemandeController extends Controller
             abort(403, 'Cette demande ne peut pas être modifiée.');
         }
 
-        $structures = Structure::all();
+        $demande->loadMissing('typeDocument.piecesRequises');
 
-        return view('demandes.edit', compact('demande', 'structures'));
+        $structures = Structure::all();
+        $categoriesSocioprofessionnelles = CategorieSocioprofessionnelle::orderBy('ordre')->get();
+
+        return view('demandes.edit', compact('demande', 'structures', 'categoriesSocioprofessionnelles'));
     }
 
     /**

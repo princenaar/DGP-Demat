@@ -20,7 +20,7 @@
                 <ul class="space-y-2 text-sm text-gray-300">
                     <li><a href="{{ route('demandes.create') }}" class="hover:text-senegal-yellow hover:underline">Faire une demande</a></li>
                     <li><a href="{{ url('/#verification') }}" class="hover:text-senegal-yellow hover:underline">Vérifier un acte</a></li>
-                    <li><a href="{{ route('demandes.create') }}" class="hover:text-senegal-yellow hover:underline">Espace agent</a></li>
+                    <li><a href="{{ url('/#process') }}" class="hover:text-senegal-yellow hover:underline">Réception par email</a></li>
                     <li><a href="#" class="hover:text-senegal-yellow hover:underline">FAQ</a></li>
                 </ul>
             </div>

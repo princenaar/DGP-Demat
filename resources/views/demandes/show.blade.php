@@ -77,7 +77,7 @@
                         </div>
                         <div>
                             <dt class="text-sm font-medium text-ink-700">Catégorie socioprofessionnelle</dt>
-                            <dd class="text-ink-900">{{ $demande->categorie_socioprofessionnelle ?? 'N/A' }}</dd>
+                            <dd class="text-ink-900">{{ $demande->categorieSocioprofessionnelle?->libelle ?? 'N/A' }}</dd>
                         </div>
                         @if($demande->date_naissance)
                             <div>
@@ -153,6 +153,20 @@
             <aside class="bg-white rounded-lg shadow border border-gray-100 p-6 h-fit">
                 <h2 class="text-lg font-semibold text-ink-900">Actions</h2>
                 <div class="mt-4 space-y-3">
+                    @if(auth()->user()->hasAnyRole(['ADMIN', 'CHEF_DE_DIVISION']))
+                        <form method="POST" action="{{ route('demandes.imputer', $demande) }}" class="rounded border border-gray-200 p-3">
+                            @csrf
+                            <x-input-label for="imputer_agent_id" value="Imputer" />
+                            <select name="agent_id" id="imputer_agent_id" class="mt-1 block w-full rounded-md border-gray-300 text-sm focus:border-senegal-green focus:ring-senegal-green" required>
+                                <option value="">Sélectionner un agent</option>
+                                @foreach($agents as $agent)
+                                    <option value="{{ $agent->id }}" @selected($demande->agent_id === $agent->id)>{{ $agent->name }}</option>
+                                @endforeach
+                            </select>
+                            <x-primary-button class="mt-3 w-full justify-center">Imputer</x-primary-button>
+                        </form>
+                    @endif
+
                     @if($etat == EtatDemande::EN_ATTENTE && auth()->user()->hasRole('ADMIN'))
                         <x-primary-button type="button" class="w-full justify-center" x-on:click="nouvelEtat = 'RECEPTIONNEE'; agentVisible = false; etatModalOpen = true">Réceptionner la demande</x-primary-button>
                     @elseif($etat == EtatDemande::RECEPTIONNEE && auth()->user()->hasRole('CHEF_DE_DIVISION'))

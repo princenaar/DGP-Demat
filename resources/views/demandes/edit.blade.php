@@ -13,6 +13,11 @@
                 <form method="POST" action="{{ route('demandes.update') }}" enctype="multipart/form-data" class="mt-6 space-y-5"
                       x-data="{
                           champs: @js($demande->typeDocument->champs_requis ?? []),
+                          pieces: @js($demande->typeDocument->piecesRequises->map(fn ($piece) => [
+                              'libelle' => $piece->libelle,
+                              'description' => $piece->description,
+                              'obligatoire' => $piece->obligatoire,
+                          ])->values()),
                           statut: @js(old('statut', $demande->statut)),
                           visible(champ) {
                               return Object.prototype.hasOwnProperty.call(this.champs, champ);
@@ -95,10 +100,15 @@
                         </div>
                     </div>
 
-                    <div x-show="visible('categorie_socioprofessionnelle')" x-cloak>
-                        <x-input-label for="categorie_socioprofessionnelle" value="Catégorie socio-professionnelle" />
-                        <x-text-input type="text" name="categorie_socioprofessionnelle" id="categorie_socioprofessionnelle" class="mt-1 block w-full" :value="old('categorie_socioprofessionnelle', $demande->categorie_socioprofessionnelle)" x-bind:required="required('categorie_socioprofessionnelle')" />
-                        <x-input-error :messages="$errors->get('categorie_socioprofessionnelle')" class="mt-2" />
+                    <div x-show="visible('categorie_socioprofessionnelle_id')" x-cloak>
+                        <x-input-label for="categorie_socioprofessionnelle_id" value="Catégorie socio-professionnelle" />
+                        <select name="categorie_socioprofessionnelle_id" id="categorie_socioprofessionnelle_id" class="mt-1 block w-full rounded-md border-gray-300 focus:border-senegal-green focus:ring-senegal-green" x-bind:required="required('categorie_socioprofessionnelle_id')">
+                            <option value="">Sélectionner une catégorie</option>
+                            @foreach($categoriesSocioprofessionnelles as $categorie)
+                                <option value="{{ $categorie->id }}" @selected((string) old('categorie_socioprofessionnelle_id', $demande->categorie_socioprofessionnelle_id) === (string) $categorie->id)>{{ $categorie->libelle }}</option>
+                            @endforeach
+                        </select>
+                        <x-input-error :messages="$errors->get('categorie_socioprofessionnelle_id')" class="mt-2" />
                     </div>
 
                     <div class="grid grid-cols-1 gap-5 sm:grid-cols-3">
@@ -119,6 +129,21 @@
                             <x-text-input type="date" name="date_depart_retraite" id="date_depart_retraite" class="mt-1 block w-full" value="{{ old('date_depart_retraite', optional($demande->date_depart_retraite)->format('Y-m-d')) }}" x-bind:required="required('date_depart_retraite')" />
                             <x-input-error :messages="$errors->get('date_depart_retraite')" class="mt-2" />
                         </div>
+                    </div>
+
+                    <div class="rounded-md border border-gray-200 bg-gray-50 p-4" x-show="pieces.length > 0" x-cloak>
+                        <p class="text-sm font-semibold text-ink-900">Pièces à fournir</p>
+                        <ul class="mt-3 space-y-2">
+                            <template x-for="piece in pieces" :key="piece.libelle">
+                                <li class="rounded border border-gray-200 bg-white p-3">
+                                    <div class="flex items-start justify-between gap-3">
+                                        <span class="text-sm font-medium text-ink-900" x-text="piece.libelle"></span>
+                                        <span class="rounded-full px-2 py-1 text-xs font-semibold" x-bind:class="piece.obligatoire ? 'bg-senegal-red/10 text-senegal-red' : 'bg-gray-100 text-gray-600'" x-text="piece.obligatoire ? 'Obligatoire' : 'Facultatif'"></span>
+                                    </div>
+                                    <p class="mt-1 text-sm text-gray-600" x-show="piece.description" x-text="piece.description"></p>
+                                </li>
+                            </template>
+                        </ul>
                     </div>
 
                     <div>

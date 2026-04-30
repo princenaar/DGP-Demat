@@ -57,3 +57,4 @@ yarn-error.log
 /.mcp.json
 design-migration-plan.md
 update-the-design-template-vectorized-hearth.md
+/.playwright-mcp

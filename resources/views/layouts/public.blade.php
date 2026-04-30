@@ -17,12 +17,17 @@
 <body class="min-h-screen flex flex-col">
     @include('layouts.partials.gov-strip')
     @php
+        $navBase = 'border-b-2 border-transparent pb-1 text-ink-700 hover:text-senegal-green font-medium transition-colors';
+        $navActive = 'border-b-2 border-senegal-green pb-1 text-ink-900 font-medium';
+        $isHome = request()->path() === '/';
+        $isCreate = request()->routeIs('demandes.create');
+        $isLogin = request()->routeIs('login');
         $publicNav = '
-            <nav class="flex space-x-6 text-sm">
-                <a href="' . url('/') . '" class="text-ink-700 hover:text-senegal-green font-medium">Accueil</a>
-                <a href="' . route('demandes.create') . '" class="text-ink-700 hover:text-senegal-green font-medium">Faire une demande</a>
-                <a href="' . url('/#verification') . '" class="text-ink-700 hover:text-senegal-green font-medium">Vérifier un acte</a>
-                <a href="' . route('login') . '" class="text-ink-700 hover:text-senegal-green font-medium">Connexion</a>
+            <nav class="flex space-x-6 text-base">
+                <a href="' . url('/') . '" class="' . ($isHome ? $navActive : $navBase) . '">Accueil</a>
+                <a href="' . route('demandes.create') . '" class="' . ($isCreate ? $navActive : $navBase) . '">Faire une demande</a>
+                <a href="' . url('/#verification') . '" class="' . $navBase . '">Vérifier un acte</a>
+                <a href="' . route('login') . '" class="' . ($isLogin ? $navActive : $navBase) . '">Connexion</a>
             </nav>
         ';
     @endphp

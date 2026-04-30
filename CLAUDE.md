@@ -21,6 +21,7 @@ composer dev
 # Individual pieces
 php artisan serve                 # HTTP server
 php artisan queue:listen --tries=1
+php artisan schedule:work         # local scheduler for daily digests
 php artisan pail --timeout=0      # live log tail
 npm run dev                        # Vite dev server
 npm run build                      # production assets

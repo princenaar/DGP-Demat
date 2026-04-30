@@ -2,22 +2,24 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- *
- *
- * @property-read \App\Models\EtatDemande|null $etat
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\HistoriqueEtat> $historiques
+ * @property-read EtatDemande|null $etat
+ * @property-read Collection<int, HistoriqueEtat> $historiques
  * @property-read int|null $historiques_count
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\FichierJustificatif> $justificatifs
+ * @property-read Collection<int, FichierJustificatif> $justificatifs
  * @property-read int|null $justificatifs_count
- * @property-read \App\Models\Structure|null $structure
- * @property-read \App\Models\TypeDocument|null $typeDocument
+ * @property-read Structure|null $structure
+ * @property-read TypeDocument|null $typeDocument
+ *
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Demande newModelQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Demande newQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Demande query()
+ *
  * @mixin \Eloquent
  */
 class Demande extends Model
@@ -33,7 +35,7 @@ class Demande extends Model
         'matricule',
         'nin',
         'type_document_id',
-        'categorie_socioprofessionnelle',
+        'categorie_socioprofessionnelle_id',
         'date_prise_service',
         'date_fin_service',
         'date_depart_retraite',
@@ -54,6 +56,11 @@ class Demande extends Model
     public function typeDocument()
     {
         return $this->belongsTo(TypeDocument::class);
+    }
+
+    public function categorieSocioprofessionnelle(): BelongsTo
+    {
+        return $this->belongsTo(CategorieSocioprofessionnelle::class);
     }
 
     public function structure()
@@ -80,5 +87,4 @@ class Demande extends Model
     {
         return $this->belongsTo(User::class, 'agent_id');
     }
-
 }

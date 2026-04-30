@@ -39,7 +39,7 @@ class DemandeStoreRequest extends FormRequest
             'email' => ['required', 'email:rfc', 'max:255'],
             'telephone' => ['required', 'regex:/^\+221 [0-9]{2} [0-9]{3} [0-9]{2} [0-9]{2}$/'],
 
-            'categorie_socioprofessionnelle' => ['nullable', 'string', 'max:150'],
+            'categorie_socioprofessionnelle_id' => ['nullable', 'exists:categories_socioprofessionnelles,id'],
             'date_prise_service' => ['nullable', 'date'],
             'date_fin_service' => ['nullable', 'date', 'after_or_equal:date_prise_service'],
             'date_depart_retraite' => ['nullable', 'date'],
@@ -55,6 +55,8 @@ class DemandeStoreRequest extends FormRequest
         return [
             function (Validator $validator): void {
                 $this->validateTypeDocumentFields($validator);
+                $this->validateEligibility($validator);
+                $this->validateRequiredFiles($validator);
                 $this->validateRecaptcha($validator);
             },
         ];
@@ -89,14 +91,14 @@ class DemandeStoreRequest extends FormRequest
             'date_prise_service' => 'date de prise de service',
             'date_fin_service' => 'date de fin de service',
             'date_depart_retraite' => 'date de départ à la retraite',
-            'categorie_socioprofessionnelle' => 'catégorie socio-professionnelle',
+            'categorie_socioprofessionnelle_id' => 'catégorie socio-professionnelle',
             'fichiers.*' => 'fichier',
         ];
     }
 
     private function validateTypeDocumentFields(Validator $validator): void
     {
-        $typeDocument = TypeDocument::find($this->input('type_document_id'));
+        $typeDocument = $this->typeDocument();
 
         if (! $typeDocument) {
             return;
@@ -108,6 +110,39 @@ class DemandeStoreRequest extends FormRequest
 
                 $validator->errors()->add($field, "Le champ {$attribute} est obligatoire pour ce type de document.");
             }
+        }
+    }
+
+    private function validateEligibility(Validator $validator): void
+    {
+        $typeDocument = $this->typeDocument();
+
+        if (! $typeDocument || blank($typeDocument->eligibilite)) {
+            return;
+        }
+
+        if ($this->input('statut') !== $typeDocument->eligibilite) {
+            $validator->errors()->add(
+                'statut',
+                'Le statut sélectionné ne correspond pas à l’éligibilité de ce type de document.'
+            );
+        }
+    }
+
+    private function validateRequiredFiles(Validator $validator): void
+    {
+        $typeDocument = $this->typeDocument();
+
+        if (! $typeDocument) {
+            return;
+        }
+
+        $hasRequiredPieces = $typeDocument->piecesRequises()
+            ->where('obligatoire', true)
+            ->exists();
+
+        if ($hasRequiredPieces && ! $this->hasFile('fichiers')) {
+            $validator->errors()->add('fichiers', 'Veuillez joindre les pièces obligatoires pour ce type de document.');
         }
     }
 
@@ -143,5 +178,10 @@ class DemandeStoreRequest extends FormRequest
         if (! $response->json('success', false)) {
             $validator->errors()->add('g-recaptcha-response', 'La vérification reCAPTCHA a échoué.');
         }
+    }
+
+    private function typeDocument(): ?TypeDocument
+    {
+        return TypeDocument::with('piecesRequises')->find($this->input('type_document_id'));
     }
 }

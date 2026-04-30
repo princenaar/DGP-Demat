@@ -16,6 +16,9 @@ class DatabaseSeeder extends Seeder
             StructureSeeder::class,
             TypeDocumentSeeder::class,
             EtatDemandeSeeder::class,
+            CategorieSocioprofessionnelleSeeder::class,
+            PieceRequiseSeeder::class,
+            WorkflowTransitionSeeder::class,
         ]);
     }
 }
