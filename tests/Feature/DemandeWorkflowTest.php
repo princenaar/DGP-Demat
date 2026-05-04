@@ -498,6 +498,61 @@ class DemandeWorkflowTest extends TestCase
         $this->assertNotSame($hidden->nom, $payload[0]['nom']);
     }
 
+    public function test_demandes_index_renders_etat_filter(): void
+    {
+        $admin = User::factory()->create();
+        $admin->assignRole('ADMIN');
+
+        $this->actingAs($admin)->get(route('demandes.index'))
+            ->assertOk()
+            ->assertViewHas('etatOptions')
+            ->assertSee('Tous les états')
+            ->assertSee('En attente');
+    }
+
+    public function test_data_endpoint_filters_rows_by_etat(): void
+    {
+        $admin = User::factory()->create();
+        $admin->assignRole('ADMIN');
+        $visible = $this->makeDemande(EtatDemande::VALIDEE, ['nom' => 'Visible']);
+        $hidden = $this->makeDemande(EtatDemande::RECEPTIONNEE, ['nom' => 'Cache']);
+        $etatValideeId = EtatDemande::where('nom', EtatDemande::VALIDEE)->value('id');
+
+        $response = $this->actingAs($admin)->getJson(route('demandes.data', [
+            'etat_id' => $etatValideeId,
+        ]));
+
+        $response->assertOk();
+        $payload = $response->json('data');
+
+        $this->assertCount(1, $payload);
+        $this->assertSame($visible->nom, $payload[0]['nom']);
+        $this->assertNotSame($hidden->nom, $payload[0]['nom']);
+    }
+
+    public function test_data_endpoint_combines_etat_filter_with_agent_scope(): void
+    {
+        $agent = User::factory()->create();
+        $agent->assignRole('AGENT');
+        $otherAgent = User::factory()->create();
+        $otherAgent->assignRole('AGENT');
+        $visible = $this->makeDemande(EtatDemande::VALIDEE, ['agent_id' => $agent->id, 'nom' => 'Visible']);
+        $this->makeDemande(EtatDemande::RECEPTIONNEE, ['agent_id' => $agent->id, 'nom' => 'AutreEtat']);
+        $hidden = $this->makeDemande(EtatDemande::VALIDEE, ['agent_id' => $otherAgent->id, 'nom' => 'Cache']);
+        $etatValideeId = EtatDemande::where('nom', EtatDemande::VALIDEE)->value('id');
+
+        $response = $this->actingAs($agent)->getJson(route('demandes.data', [
+            'etat_id' => $etatValideeId,
+        ]));
+
+        $response->assertOk();
+        $payload = $response->json('data');
+
+        $this->assertCount(1, $payload);
+        $this->assertSame($visible->nom, $payload[0]['nom']);
+        $this->assertNotSame($hidden->nom, $payload[0]['nom']);
+    }
+
     public function test_pdf_signature_transition_persists_file_and_sends_mail(): void
     {
         Mail::fake();

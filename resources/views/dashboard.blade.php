@@ -57,8 +57,12 @@
         </section>
 
         <section class="rounded-lg border border-gray-100 bg-white shadow">
-            <div class="border-b border-gray-100 p-6">
+            <div class="border-b border-gray-100 p-6 space-y-4">
                 <h2 class="text-lg font-semibold text-ink-900">Mes demandes à traiter</h2>
+                @include('demandes.partials.etat-filter', [
+                    'filterId' => 'dashboard-etat-filter',
+                    'etatOptions' => $etatOptions,
+                ])
             </div>
             <div class="overflow-x-auto">
                 <table id="dashboard-actions-table" class="min-w-full divide-y divide-gray-200">
@@ -80,44 +84,9 @@
 @endsection
 
 @push('scripts')
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            new window.DataTable('#dashboard-actions-table', {
-                processing: true,
-                serverSide: true,
-                ajax: '{{ route('dashboard.data') }}',
-                columns: [
-                    {data: 'nom', name: 'nom'},
-                    {data: 'prenom', name: 'prenom'},
-                    {data: 'structure', name: 'structure.nom', orderable: false, searchable: false},
-                    {data: 'type', name: 'typeDocument.nom', orderable: false, searchable: false},
-                    {data: 'etat', name: 'etatDemande.nom', orderable: false, searchable: false},
-                    {data: 'created_at', name: 'created_at'},
-                    {data: 'actions', name: 'actions', orderable: false, searchable: false}
-                ],
-                columnDefs: [
-                    {
-                        targets: 5,
-                        render(data) {
-                            return new Intl.DateTimeFormat('fr-FR').format(new Date(data));
-                        }
-                    }
-                ],
-                language: {
-                    search: 'Rechercher :',
-                    lengthMenu: 'Afficher _MENU_ entrées',
-                    info: 'Affichage de _START_ à _END_ sur _TOTAL_ entrées',
-                    infoEmpty: 'Aucune entrée disponible',
-                    zeroRecords: 'Aucun résultat trouvé',
-                    processing: 'Chargement...',
-                    paginate: {
-                        first: 'Premier',
-                        last: 'Dernier',
-                        next: 'Suivant',
-                        previous: 'Précédent'
-                    }
-                }
-            });
-        });
-    </script>
+    @include('demandes.partials.datatable-script', [
+        'tableId' => 'dashboard-actions-table',
+        'filterId' => 'dashboard-etat-filter',
+        'ajaxUrl' => route('dashboard.data'),
+    ])
 @endpush

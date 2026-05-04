@@ -11,6 +11,7 @@ use App\Models\FichierJustificatif;
 use App\Models\Structure;
 use App\Models\TypeDocument;
 use App\Models\User;
+use App\Services\DemandeEtatFilter;
 use App\Services\DemandeMailService;
 use App\Services\WorkflowEngine;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -84,9 +85,11 @@ class DemandeController extends Controller
         }
     }
 
-    public function index()
+    public function index(DemandeEtatFilter $etatFilter): View
     {
-        return view('demandes.index');
+        return view('demandes.index', [
+            'etatOptions' => $etatFilter->options(),
+        ]);
     }
 
     public function show(Demande $demande)
@@ -104,7 +107,7 @@ class DemandeController extends Controller
         return view('demandes.show', compact('demande', 'agents', 'pdfBase64'));
     }
 
-    public function data()
+    public function data(Request $request, DemandeEtatFilter $etatFilter)
     {
         // Vérification du rôle de l'utilisateur
         if (auth()->user()->hasRole('AGENT')) {
@@ -116,7 +119,7 @@ class DemandeController extends Controller
             return response()->json(['error' => 'Unauthorized'], 403);
         }
 
-        // Vous pouvez filtrer par rôle ici selon les besoins futurs
+        $etatFilter->applyToQuery($query, $request);
 
         return DataTables::of($query)
             ->addColumn('etat', fn ($demande) => $demande->etatDemande->nom)

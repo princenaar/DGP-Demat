@@ -58,8 +58,29 @@ class DashboardTest extends TestCase
             ->assertViewHas('demandesATraiterCount', 0)
             ->assertViewHas('countsByTypeLast30Days')
             ->assertViewHas('averageSignatureTime')
+            ->assertViewHas('etatOptions')
             ->assertSee('Demandes par état')
-            ->assertSee('Mes demandes à traiter');
+            ->assertSee('Mes demandes à traiter')
+            ->assertSee('Tous les états')
+            ->assertSee('Réceptionnée');
+    }
+
+    public function test_home_path_displays_dashboard_for_authenticated_users(): void
+    {
+        $admin = User::factory()->create();
+        $admin->assignRole('ADMIN');
+
+        $this->actingAs($admin)->get('/')
+            ->assertOk()
+            ->assertViewIs('dashboard')
+            ->assertSee('Tableau de bord');
+    }
+
+    public function test_home_path_displays_public_homepage_for_guests(): void
+    {
+        $this->get('/')
+            ->assertOk()
+            ->assertViewIs('welcome');
     }
 
     public function test_dashboard_data_returns_only_rows_awaiting_current_user_action(): void
@@ -88,6 +109,33 @@ class DashboardTest extends TestCase
 
         $this->assertCount(1, $payload);
         $this->assertSame($visible->nom, $payload[0]['nom']);
+    }
+
+    public function test_dashboard_data_filters_actionable_rows_by_etat(): void
+    {
+        $chef = User::factory()->create();
+        $chef->assignRole('CHEF_DE_DIVISION');
+        $visible = $this->makeDemande(EtatDemande::RECEPTIONNEE, ['nom' => 'A traiter']);
+        $this->makeDemande(EtatDemande::EN_ATTENTE, ['nom' => 'PasActionChef']);
+        $etatReceptionneeId = EtatDemande::where('nom', EtatDemande::RECEPTIONNEE)->value('id');
+        $etatEnAttenteId = EtatDemande::where('nom', EtatDemande::EN_ATTENTE)->value('id');
+
+        $response = $this->actingAs($chef)->getJson(route('dashboard.data', [
+            'etat_id' => $etatReceptionneeId,
+        ]));
+
+        $response->assertOk();
+        $payload = $response->json('data');
+
+        $this->assertCount(1, $payload);
+        $this->assertSame($visible->nom, $payload[0]['nom']);
+
+        $response = $this->actingAs($chef)->getJson(route('dashboard.data', [
+            'etat_id' => $etatEnAttenteId,
+        ]));
+
+        $response->assertOk();
+        $this->assertCount(0, $response->json('data'));
     }
 
     public function test_chef_dashboard_sees_receptionnee_demande_to_process(): void

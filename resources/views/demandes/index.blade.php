@@ -6,6 +6,12 @@
 
 @section('content')
     <div class="bg-white rounded-lg shadow border border-gray-100">
+        <div class="border-b border-gray-100 p-6">
+            @include('demandes.partials.etat-filter', [
+                'filterId' => 'demandes-etat-filter',
+                'etatOptions' => $etatOptions,
+            ])
+        </div>
         <div class="overflow-x-auto">
             <table id="demandes-table" class="min-w-full divide-y divide-gray-200">
                 <thead class="bg-senegal-green text-white">
@@ -25,44 +31,9 @@
 @endsection
 
 @push('scripts')
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            new window.DataTable('#demandes-table', {
-                processing: true,
-                serverSide: true,
-                ajax: '{{ route('demandes.data') }}',
-                columns: [
-                    {data: 'nom', name: 'nom'},
-                    {data: 'prenom', name: 'prenom'},
-                    {data: 'structure', name: 'structure.nom', orderable: false, searchable: false},
-                    {data: 'type', name: 'typeDocument.nom', orderable: false, searchable: false},
-                    {data: 'etat', name: 'etatDemande.nom', orderable: false, searchable: false},
-                    {data: 'created_at', name: 'created_at'},
-                    {data: 'actions', name: 'actions', orderable: false, searchable: false}
-                ],
-                columnDefs: [
-                    {
-                        targets: 5,
-                        render(data) {
-                            return new Intl.DateTimeFormat('fr-FR').format(new Date(data));
-                        }
-                    }
-                ],
-                language: {
-                    search: 'Rechercher :',
-                    lengthMenu: 'Afficher _MENU_ entrées',
-                    info: 'Affichage de _START_ à _END_ sur _TOTAL_ entrées',
-                    infoEmpty: 'Aucune entrée disponible',
-                    zeroRecords: 'Aucun résultat trouvé',
-                    processing: 'Chargement...',
-                    paginate: {
-                        first: 'Premier',
-                        last: 'Dernier',
-                        next: 'Suivant',
-                        previous: 'Précédent'
-                    }
-                }
-            });
-        });
-    </script>
+    @include('demandes.partials.datatable-script', [
+        'tableId' => 'demandes-table',
+        'filterId' => 'demandes-etat-filter',
+        'ajaxUrl' => route('demandes.data'),
+    ])
 @endpush

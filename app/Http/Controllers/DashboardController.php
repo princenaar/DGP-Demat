@@ -6,6 +6,7 @@ use App\Models\Demande;
 use App\Models\EtatDemande;
 use App\Models\TypeDocument;
 use App\Services\DemandeBacklogService;
+use App\Services\DemandeEtatFilter;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -13,7 +14,10 @@ use Yajra\DataTables\Facades\DataTables;
 
 class DashboardController extends Controller
 {
-    public function __construct(private DemandeBacklogService $backlogService) {}
+    public function __construct(
+        private DemandeBacklogService $backlogService,
+        private DemandeEtatFilter $etatFilter
+    ) {}
 
     public function __invoke(Request $request): View
     {
@@ -26,12 +30,16 @@ class DashboardController extends Controller
             'demandesATraiterCount' => $demandesATraiter->count(),
             'countsByTypeLast30Days' => $this->countsByTypeLast30Days($demandesScope),
             'averageSignatureTime' => $this->averageSignatureTime($demandesScope),
+            'etatOptions' => $this->etatFilter->options(),
         ]);
     }
 
     public function data(Request $request)
     {
-        $demandes = $this->backlogService->demandesATraiter($request->user());
+        $demandes = $this->etatFilter->applyToCollection(
+            $this->backlogService->demandesATraiter($request->user()),
+            $request
+        );
 
         return DataTables::of($demandes)
             ->addColumn('etat', fn (Demande $demande): string => $demande->etatDemande->nom)
