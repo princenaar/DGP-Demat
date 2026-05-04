@@ -55,20 +55,23 @@
                           structures: @js($structures->map(fn ($structure) => ['id' => (string) $structure->id, 'nom' => $structure->nom])->values()),
                           structureSearch: '',
                           selectedStructureId: @js((string) $oldStructureId),
-                          selectedStructureName: '',
                           showStructureList: false,
                           files: [],
                           fieldErrors: @js($errors->keys()),
                           fieldState: {},
                           init() {
                               this.syncSelectedType();
-                              this.syncSelectedStructureName();
                           },
                           get selectedType() {
                               return this.types.find((type) => type.id === this.selectedTypeId) || null;
                           },
                           get selectedPieces() {
                               return this.selectedType ? this.selectedType.pieces : [];
+                          },
+                          get selectedStructureName() {
+                              const selected = this.structures.find((structure) => structure.id === this.selectedStructureId);
+
+                              return selected ? selected.nom : '';
                           },
                           selectType(typeId) {
                               this.selectedTypeId = typeId;
@@ -118,15 +121,16 @@
 
                               return this.structures.filter((structure) => structure.nom.toLowerCase().includes(term)).slice(0, 8);
                           },
+                          openStructureList() {
+                              this.showStructureList = true;
+                              this.$nextTick(() => this.$refs.structureSearchInput?.focus());
+                          },
                           selectStructure(structure) {
                               this.selectedStructureId = structure.id;
-                              this.selectedStructureName = structure.nom;
                               this.structureSearch = '';
                               this.showStructureList = false;
-                          },
-                          syncSelectedStructureName() {
-                              const selected = this.structures.find((structure) => structure.id === this.selectedStructureId);
-                              this.selectedStructureName = selected ? selected.nom : '';
+                              this.clearFieldState('structure_id');
+                              this.$nextTick(() => this.validateField('structure_id', this.$refs.structureSelect));
                           },
                           updateFiles(event) {
                               this.files = Array.from(event.target.files).map((file) => ({
@@ -235,19 +239,33 @@
                             <x-input-error :messages="$errors->get('nin')" class="mt-2 rounded bg-red-50 px-3 py-2" />
                         </div>
 
-                        <div class="relative" x-on:click.outside="showStructureList = false">
-                            <label for="structure_search" class="block text-sm font-medium text-gray-700">Structure {!! $requiredMark !!}</label>
-                            <input type="hidden" name="structure_id" x-model="selectedStructureId">
-                            <div class="mt-1 flex rounded-md shadow-sm">
-                                <input type="text" id="structure_search" class="block w-full rounded-l-md border-gray-300 focus:border-senegal-green focus:ring-senegal-green" x-bind:class="fieldClass('structure_id')" placeholder="Rechercher une structure" x-model="structureSearch" x-bind:required="! selectedStructureId" x-on:focus="showStructureList = true" x-on:input="showStructureList = true; clearFieldState('structure_id')" x-on:blur="validateField('structure_id', $event.target)">
-                                <button type="button" class="rounded-r-md border border-l-0 border-gray-300 bg-gray-50 px-3 text-sm font-medium text-gray-700 hover:bg-gray-100" x-on:click="showStructureList = ! showStructureList">Choisir</button>
-                            </div>
-                            <p class="mt-2 text-sm text-gray-700" x-show="selectedStructureName">Sélection : <span class="font-medium" x-text="selectedStructureName"></span></p>
-                            <div x-show="showStructureList" x-cloak class="absolute z-20 mt-1 max-h-60 w-full overflow-auto rounded-md border border-gray-200 bg-white shadow-lg">
+                        <div class="relative" x-on:click.outside="showStructureList = false" x-on:keydown.escape.window="showStructureList = false">
+                            <label for="structure_id" class="block text-sm font-medium text-gray-700">Structure {!! $requiredMark !!}</label>
+                            <select name="structure_id" id="structure_id" x-ref="structureSelect" x-model="selectedStructureId" class="sr-only" required x-on:change="clearFieldState('structure_id')" x-on:blur="validateField('structure_id', $event.target)">
+                                <option value="">Sélectionner une structure</option>
+                                @foreach($structures as $structure)
+                                    <option value="{{ $structure->id }}" @selected((string) $oldStructureId === (string) $structure->id)>{{ $structure->nom }}</option>
+                                @endforeach
+                            </select>
+                            <button type="button" class="mt-1 flex w-full items-center justify-between rounded-md border border-gray-300 bg-white px-3 py-2 text-left text-sm shadow-sm focus:border-senegal-green focus:outline-none focus:ring-1 focus:ring-senegal-green" x-bind:class="fieldClass('structure_id')" x-on:click="showStructureList ? showStructureList = false : openStructureList()" x-bind:aria-expanded="showStructureList.toString()" aria-controls="structure_options" role="combobox">
+                                <span class="truncate" x-bind:class="selectedStructureName ? 'text-ink-900' : 'text-gray-500'" x-text="selectedStructureName || 'Sélectionner une structure'"></span>
+                                <svg class="ml-3 h-5 w-5 shrink-0 text-gray-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                    <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 11.168l3.71-3.938a.75.75 0 1 1 1.08 1.04l-4.25 4.5a.75.75 0 0 1-1.08 0l-4.25-4.5a.75.75 0 0 1 .02-1.06Z" clip-rule="evenodd" />
+                                </svg>
+                            </button>
+                            <div id="structure_options" x-show="showStructureList" x-cloak class="absolute z-20 mt-1 w-full rounded-md border border-gray-200 bg-white shadow-lg">
+                                <div class="border-b border-gray-100 p-2">
+                                    <input type="search" x-ref="structureSearchInput" class="block w-full rounded-md border-gray-300 text-sm focus:border-senegal-green focus:ring-senegal-green" placeholder="Rechercher une structure" x-model="structureSearch" x-on:input="clearFieldState('structure_id')">
+                                </div>
+                                <div class="max-h-60 overflow-auto py-1" role="listbox">
                                 <template x-for="structure in filteredStructures()" :key="structure.id">
-                                    <button type="button" class="block w-full px-4 py-2 text-left text-sm hover:bg-senegal-green/10 focus:bg-senegal-green/10 focus:outline-none" x-on:click="selectStructure(structure)" x-text="structure.nom"></button>
+                                    <button type="button" class="flex w-full items-center justify-between px-4 py-2 text-left text-sm hover:bg-senegal-green/10 focus:bg-senegal-green/10 focus:outline-none" x-bind:class="selectedStructureId === structure.id ? 'bg-senegal-green/10 text-senegal-green' : 'text-ink-900'" x-on:click="selectStructure(structure)" role="option" x-bind:aria-selected="(selectedStructureId === structure.id).toString()">
+                                        <span x-text="structure.nom"></span>
+                                        <span x-show="selectedStructureId === structure.id" aria-hidden="true">✓</span>
+                                    </button>
                                 </template>
                                 <p class="px-4 py-3 text-sm text-gray-500" x-show="filteredStructures().length === 0">Aucune structure trouvée.</p>
+                                </div>
                             </div>
                             <x-input-error :messages="$errors->get('structure_id')" class="mt-2 rounded bg-red-50 px-3 py-2" />
                         </div>
