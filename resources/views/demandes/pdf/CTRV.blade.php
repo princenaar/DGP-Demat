@@ -1,7 +1,7 @@
 @extends('layouts.document')
 
 @section('numero')
-    N° <b>{{ sprintf("%05d", $demande->id) }}</b> MSAS/DRH/DGP/cald
+    N° <b>{{ sprintf("%05d", $demande->id) }}</b> MSHP/DRH/DGP/cald
 @endsection
 @section('title')
     CERTIFICAT DE TRAVAIL
@@ -14,7 +14,7 @@
             contractuel,
         @elseif($demande->statut === 'étatique')
             matricule de solde n° <strong>{{ $demande->matricule }},</strong>
-        @endif était en service au Ministère de la santé et de l’Hygiène publique du
+        @endif était en service au Ministère de la Santé et de l'Hygiène publique du
         {{ $demande->date_prise_service->isoFormat($demande->date_prise_service->day == 1 ? 'Do MMMM YYYY' : 'D MMMM YYYY') }}
         au {{ $demande->date_fin_service->isoFormat($demande->date_fin_service->day == 1 ? 'Do MMMM YYYY' : 'D MMMM YYYY') }}.
     </p>

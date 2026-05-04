@@ -17,7 +17,7 @@ User-confirmed decisions:
 
 ## Phase 0 — Trivial fixes (item 1, item 5)
 
-**Ministry name (item 1)** — replace literal `Ministère de la Santé et de l'Action sociale` with `Ministère de la santé et de l'Hygiène publique` in three PDFs only:
+**Ministry name (item 1)** — replace previous ministry wording with `Ministère de la Santé et de l'Hygiène publique` in three PDFs only:
 - `resources/views/demandes/pdf/ADM.blade.php:17`
 - `resources/views/demandes/pdf/CTRV.blade.php:17`
 - `resources/views/demandes/pdf/TRV.blade.php:17`

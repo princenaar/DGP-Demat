@@ -4,7 +4,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-**DGP-Demat** — Dématérialisation des actes administratifs (Senegalese Ministry of Health, DGP). Web app for citizens/agents to request administrative certificates, workflow them through approval states, sign them, and verify authenticity via QR code.
+**DGP-Demat** (codebase name) → **e-DRHSanté** (production platform name) — Dématérialisation des actes administratifs de la **DRH** (Direction des Ressources Humaines) du **MSHP** (Ministère de la Santé et de l'Hygiène publique du Sénégal). Web app for **agents de santé** (health workers, not generic citizens) to request administrative certificates, processed by the DRH, signed, and verifiable via QR code. Future scope: integration of points de prestation de soins (hôpitaux, laboratoires) and the national platform e-Sénégal.
+
+**Naming notes** (use these consistently in user-facing content):
+- The ministry is **MSHP** — Ministère de la Santé et de l'Hygiène publique. (Do not use older ministry names.)
+- The owning direction is the **DRH**. (Older drafts referenced "DGP"; in user-facing wording use DRH.)
+- The platform's user-facing name is **e-DRHSanté**.
+- The end users are **agents de santé**, not "citizens".
 
 Stack: Laravel 13 (PHP ^8.3) · Blade + Tailwind 3 + Bootstrap 5 + Alpine.js (Vite) · MySQL (dev via `.env`) / SQLite (tests) · Spatie Permission · barryvdh/laravel-dompdf · simplesoftwareio/simple-qrcode · yajra/laravel-datatables · laravel/boost (MCP).
 

@@ -75,7 +75,7 @@
 </head>
 <body>
 <div class="page">
-    <div class="numero">N° <b>{{ sprintf("%05d", $demande->id) }}</b> MSAS/DRH/DGP/cald</div>
+    <div class="numero">N° <b>{{ sprintf("%05d", $demande->id) }}</b> MSHP/DRH/DGP/cald</div>
     <div class="numero" style="margin-top: 20px;">Dakar, le {{ Carbon::now()->format('d/m/Y') }}</div>
     <div class="title">ATTESTATION</div>
 
