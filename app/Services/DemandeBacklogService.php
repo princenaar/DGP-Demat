@@ -17,7 +17,7 @@ class DemandeBacklogService
 
         if ($user->hasRole('AGENT')) {
             $query->where('agent_id', $user->id);
-        } elseif (! $user->hasAnyRole(['ADMIN', 'CHEF_DE_DIVISION', 'DRH'])) {
+        } elseif (! $user->hasAnyRole(['ADMIN', 'ACCUEIL', 'CHEF_DE_DIVISION', 'DRH'])) {
             $query->whereRaw('1 = 0');
         }
 

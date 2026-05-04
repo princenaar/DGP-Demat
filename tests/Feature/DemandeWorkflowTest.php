@@ -51,6 +51,8 @@ class DemandeWorkflowTest extends TestCase
 
     public function test_public_create_page_renders_reference_data(): void
     {
+        $structure = Structure::firstOrFail();
+
         $response = $this->get(route('demandes.create'));
 
         $response
@@ -61,6 +63,10 @@ class DemandeWorkflowTest extends TestCase
             ->assertViewHas('categoriesSocioprofessionnelles')
             ->assertViewHas('recaptchaSiteKey')
             ->assertSee('g-recaptcha', false)
+            ->assertSee('<select name="structure_id"', false)
+            ->assertSee('<option value="'.$structure->id.'"', false)
+            ->assertSee($structure->nom)
+            ->assertDontSee('Sélection :')
             ->assertSee('Rechercher une structure')
             ->assertSee('Ajouter des pièces justificatives')
             ->assertSee('Faire une demande');
@@ -339,13 +345,13 @@ class DemandeWorkflowTest extends TestCase
         $response->assertSessionHasErrors('fichiers');
     }
 
-    public function test_admin_can_receptionner_demande_and_append_audit_comment(): void
+    public function test_accueil_can_receptionner_demande_and_append_audit_comment(): void
     {
-        $admin = User::factory()->create();
-        $admin->assignRole('ADMIN');
+        $accueil = User::factory()->create();
+        $accueil->assignRole('ACCUEIL');
         $demande = $this->makeDemande(EtatDemande::EN_ATTENTE);
 
-        $response = $this->actingAs($admin)->post(route('demandes.changerEtat', $demande), [
+        $response = $this->actingAs($accueil)->post(route('demandes.changerEtat', $demande), [
             'nouvel_etat' => EtatDemande::RECEPTIONNEE,
             'commentaire' => 'Dossier reçu',
         ]);
@@ -357,7 +363,7 @@ class DemandeWorkflowTest extends TestCase
         $demande->refresh();
         $this->assertSame(EtatDemande::RECEPTIONNEE, $demande->etatDemande->nom);
         $this->assertStringContainsString('Dossier reçu', $demande->commentaire);
-        $this->assertStringContainsString($admin->name, $demande->commentaire);
+        $this->assertStringContainsString($accueil->name, $demande->commentaire);
     }
 
     public function test_invalid_state_transition_is_rejected(): void

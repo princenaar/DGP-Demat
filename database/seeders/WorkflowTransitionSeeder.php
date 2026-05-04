@@ -17,7 +17,7 @@ class WorkflowTransitionSeeder extends Seeder
         $etats = EtatDemande::query()->pluck('id', 'nom');
 
         $transitions = [
-            [EtatDemande::EN_ATTENTE, EtatDemande::RECEPTIONNEE, 'ADMIN'],
+            [EtatDemande::EN_ATTENTE, EtatDemande::RECEPTIONNEE, 'ACCUEIL'],
             [EtatDemande::RECEPTIONNEE, EtatDemande::VALIDEE, 'CHEF_DE_DIVISION'],
             [EtatDemande::RECEPTIONNEE, EtatDemande::REFUSEE, 'CHEF_DE_DIVISION'],
             [EtatDemande::VALIDEE, EtatDemande::COMPLEMENTS, 'AGENT'],

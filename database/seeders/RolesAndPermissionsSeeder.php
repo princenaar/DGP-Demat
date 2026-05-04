@@ -2,9 +2,7 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
-use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 
 class RolesAndPermissionsSeeder extends Seeder
@@ -15,6 +13,7 @@ class RolesAndPermissionsSeeder extends Seeder
     public function run(): void
     {
         $adminRole = Role::firstOrCreate(['name' => 'ADMIN']);
+        $accueilRole = Role::firstOrCreate(['name' => 'ACCUEIL']);
         $chefDivisionRole = Role::firstOrCreate(['name' => 'CHEF_DE_DIVISION']);
         $agentRole = Role::firstOrCreate(['name' => 'AGENT']);
         $drhRole = Role::firstOrCreate(['name' => 'DRH']);

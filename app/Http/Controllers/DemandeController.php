@@ -91,7 +91,7 @@ class DemandeController extends Controller
 
     public function show(Demande $demande)
     {
-        $agents = User::role('AGENT')->get();
+        $agents = User::role('AGENT')->active()->get();
         // Aperçu de la demande finale
         $pdfBase64 = null;
         if ($demande->etatDemande->nom == EtatDemande::VALIDEE || $demande->etatDemande->nom == EtatDemande::EN_SIGNATURE) {
@@ -110,7 +110,7 @@ class DemandeController extends Controller
         if (auth()->user()->hasRole('AGENT')) {
             $query = Demande::where('agent_id', auth()->user()->id)
                 ->with('typeDocument', 'etatDemande', 'structure');
-        } elseif (auth()->user()->hasAnyRole(['ADMIN', 'CHEF_DE_DIVISION', 'DRH'])) {
+        } elseif (auth()->user()->hasAnyRole(['ADMIN', 'ACCUEIL', 'CHEF_DE_DIVISION', 'DRH'])) {
             $query = Demande::with('typeDocument', 'etatDemande', 'structure');
         } else {
             return response()->json(['error' => 'Unauthorized'], 403);
@@ -164,7 +164,7 @@ class DemandeController extends Controller
             'commentaire' => ['nullable', 'string'],
         ]);
 
-        $agent = User::role('AGENT')->findOrFail($validated['agent_id']);
+        $agent = User::role('AGENT')->active()->findOrFail($validated['agent_id']);
 
         $workflowEngine->imputer(
             $demande,

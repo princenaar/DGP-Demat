@@ -55,7 +55,7 @@ class DashboardTest extends TestCase
             ->assertOk()
             ->assertViewIs('dashboard')
             ->assertViewHas('countsByEtat')
-            ->assertViewHas('demandesATraiterCount', 1)
+            ->assertViewHas('demandesATraiterCount', 0)
             ->assertViewHas('countsByTypeLast30Days')
             ->assertViewHas('averageSignatureTime')
             ->assertSee('Demandes par état')

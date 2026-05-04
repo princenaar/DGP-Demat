@@ -90,8 +90,8 @@ class WorkflowEngineTest extends TestCase
 
     public function test_automatic_validation_transition_runs_when_enabled_and_rules_pass(): void
     {
-        $admin = User::factory()->create();
-        $admin->assignRole('ADMIN');
+        $accueil = User::factory()->create();
+        $accueil->assignRole('ACCUEIL');
         $type = TypeDocument::where('code', 'TRV')->firstOrFail();
         $demande = $this->makeDemande(EtatDemande::EN_ATTENTE, [
             'type_document_id' => $type->id,
@@ -103,7 +103,7 @@ class WorkflowEngineTest extends TestCase
             ->whereBelongsTo(EtatDemande::where('nom', EtatDemande::VALIDEE)->firstOrFail(), 'etatCible')
             ->update(['automatique' => true]);
 
-        $this->actingAs($admin)->post(route('demandes.changerEtat', $demande), [
+        $this->actingAs($accueil)->post(route('demandes.changerEtat', $demande), [
             'nouvel_etat' => EtatDemande::RECEPTIONNEE,
             'commentaire' => 'Réception',
         ])->assertRedirect(route('demandes.show', $demande));

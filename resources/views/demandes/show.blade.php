@@ -167,7 +167,7 @@
                         </form>
                     @endif
 
-                    @if($etat == EtatDemande::EN_ATTENTE && auth()->user()->hasRole('ADMIN'))
+                    @if($etat == EtatDemande::EN_ATTENTE && auth()->user()->hasRole('ACCUEIL'))
                         <x-primary-button type="button" class="w-full justify-center" x-on:click="nouvelEtat = 'RECEPTIONNEE'; agentVisible = false; etatModalOpen = true">Réceptionner la demande</x-primary-button>
                     @elseif($etat == EtatDemande::RECEPTIONNEE && auth()->user()->hasRole('CHEF_DE_DIVISION'))
                         <x-primary-button type="button" class="w-full justify-center" x-on:click="nouvelEtat = 'VALIDEE'; agentVisible = true; etatModalOpen = true">Valider la demande</x-primary-button>

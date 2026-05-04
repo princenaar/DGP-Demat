@@ -80,7 +80,7 @@ class PhaseOneSchemaTest extends TestCase
             ->whereBelongsTo($cible, 'etatCible')
             ->firstOrFail();
 
-        $this->assertSame('ADMIN', $transition->role_requis);
+        $this->assertSame('ACCUEIL', $transition->role_requis);
         $this->assertFalse($transition->automatique);
     }
 

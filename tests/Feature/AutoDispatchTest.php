@@ -35,15 +35,15 @@ class AutoDispatchTest extends TestCase
 
     public function test_default_agent_is_assigned_when_demande_is_receptionnee(): void
     {
-        $admin = User::factory()->create();
-        $admin->assignRole('ADMIN');
+        $accueil = User::factory()->create();
+        $accueil->assignRole('ACCUEIL');
         $agent = User::factory()->create();
         $agent->assignRole('AGENT');
         $type = TypeDocument::where('code', 'TRV')->firstOrFail();
         $type->update(['default_agent_id' => $agent->id]);
         $demande = $this->makeDemande(EtatDemande::EN_ATTENTE, ['type_document_id' => $type->id]);
 
-        $this->actingAs($admin)->post(route('demandes.changerEtat', $demande), [
+        $this->actingAs($accueil)->post(route('demandes.changerEtat', $demande), [
             'nouvel_etat' => EtatDemande::RECEPTIONNEE,
             'commentaire' => 'Réception du dossier',
         ])->assertRedirect(route('demandes.show', $demande));
@@ -55,7 +55,7 @@ class AutoDispatchTest extends TestCase
         $this->assertDatabaseHas('historique_etats', [
             'demande_id' => $demande->id,
             'etat_demande_id' => $demande->etat_demande_id,
-            'user_id' => $admin->id,
+            'user_id' => $accueil->id,
         ]);
     }
 
