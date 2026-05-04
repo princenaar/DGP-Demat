@@ -79,6 +79,23 @@ class AutoDispatchTest extends TestCase
         $this->assertSame(1, HistoriqueEtat::where('demande_id', $demande->id)->count());
     }
 
+    public function test_show_page_keeps_agent_assignment_only_in_state_change_modal(): void
+    {
+        $chef = User::factory()->create();
+        $chef->assignRole('CHEF_DE_DIVISION');
+        $agent = User::factory()->create(['name' => 'Agent cible']);
+        $agent->assignRole('AGENT');
+        $demande = $this->makeDemande(EtatDemande::RECEPTIONNEE);
+
+        $this->actingAs($chef)->get(route('demandes.show', $demande))
+            ->assertOk()
+            ->assertSee('Valider la demande')
+            ->assertSee('Imputer à un agent')
+            ->assertSee('Agent cible')
+            ->assertDontSee(route('demandes.imputer', $demande), false)
+            ->assertDontSee('id="imputer_agent_id"', false);
+    }
+
     private function makeDemande(string $etat, array $attributes = []): Demande
     {
         return Demande::create(array_merge([
