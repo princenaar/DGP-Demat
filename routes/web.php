@@ -11,9 +11,14 @@ use App\Http\Controllers\Settings\TypeDocumentController;
 use App\Http\Controllers\Settings\UserManagementController;
 use App\Http\Controllers\Settings\WorkflowTransitionController;
 use App\Http\Controllers\UserController;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', function () {
+Route::get('/', function (Request $request, DashboardController $dashboardController) {
+    if ($request->user()) {
+        return $dashboardController($request);
+    }
+
     return view('welcome');
 });
 

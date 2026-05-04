@@ -27,6 +27,7 @@ class LayoutPartialsTest extends TestCase
 
         $this->actingAs($user)->get(route('dashboard'))
             ->assertOk()
+            ->assertSee('Dashboard')
             ->assertDontSee('Fann Résidence, Rue Aimé Césaire')
             ->assertDontSee('drh@sante.gouv.sn')
             ->assertDontSee('+221 33 869 42 27')

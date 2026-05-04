@@ -26,6 +26,7 @@
         $logoutMobile = 'block w-full text-center px-4 py-3 rounded-full border-2 border-senegal-red text-senegal-red font-semibold hover:bg-senegal-red hover:text-white transition';
 
         $authNav = '<nav class="hidden md:flex items-center gap-6">';
+        $authNav .= '<a href="' . route('dashboard') . '" class="' . $linkClass . (request()->routeIs('dashboard') ? $activeClass : $inactiveClass) . '">Dashboard</a>';
         $authNav .= '<a href="' . route('demandes.index') . '" class="' . $linkClass . (request()->routeIs('demandes.index') ? $activeClass : $inactiveClass) . '">Mes demandes</a>';
 
         if (auth()->user()->hasRole('ADMIN')) {
@@ -37,6 +38,7 @@
         $authNav .= '</nav>';
 
         $authNavMobile = '<nav class="flex flex-col">';
+        $authNavMobile .= '<a href="' . route('dashboard') . '" class="' . (request()->routeIs('dashboard') ? $mobileActive : $mobileBase) . '">Dashboard</a>';
         $authNavMobile .= '<a href="' . route('demandes.index') . '" class="' . (request()->routeIs('demandes.index') ? $mobileActive : $mobileBase) . '">Mes demandes</a>';
 
         if (auth()->user()->hasRole('ADMIN')) {
