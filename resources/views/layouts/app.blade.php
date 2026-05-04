@@ -29,7 +29,7 @@
         $authNav .= '<a href="' . route('demandes.index') . '" class="' . $linkClass . (request()->routeIs('demandes.index') ? $activeClass : $inactiveClass) . '">Mes demandes</a>';
 
         if (auth()->user()->hasRole('ADMIN')) {
-            $authNav .= '<a href="' . route('users.index') . '" class="' . $linkClass . (request()->routeIs('users.index') ? $activeClass : $inactiveClass) . '">Utilisateurs</a>';
+            $authNav .= '<a href="' . route('settings.index') . '" class="' . $linkClass . (request()->routeIs('settings.*') ? $activeClass : $inactiveClass) . '">Paramètres</a>';
         }
 
         $authNav .= '<a href="' . route('profile.edit') . '" class="' . $linkClass . (request()->routeIs('profile.edit') ? $activeClass : $inactiveClass) . '">Profil</a>';
@@ -40,7 +40,7 @@
         $authNavMobile .= '<a href="' . route('demandes.index') . '" class="' . (request()->routeIs('demandes.index') ? $mobileActive : $mobileBase) . '">Mes demandes</a>';
 
         if (auth()->user()->hasRole('ADMIN')) {
-            $authNavMobile .= '<a href="' . route('users.index') . '" class="' . (request()->routeIs('users.index') ? $mobileActive : $mobileBase) . '">Utilisateurs</a>';
+            $authNavMobile .= '<a href="' . route('settings.index') . '" class="' . (request()->routeIs('settings.*') ? $mobileActive : $mobileBase) . '">Paramètres</a>';
         }
 
         $authNavMobile .= '<a href="' . route('profile.edit') . '" class="' . (request()->routeIs('profile.edit') ? $mobileActive : $mobileBase) . '">Profil</a>';

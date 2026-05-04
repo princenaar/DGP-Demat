@@ -46,8 +46,8 @@ class AdminUserTest extends TestCase
 
         $this->actingAs($admin)->get(route('demandes.index'))
             ->assertOk()
-            ->assertSee('Utilisateurs')
-            ->assertSee(route('users.index'));
+            ->assertSee('Paramètres')
+            ->assertSee(route('settings.index'));
     }
 
     public function test_non_admin_cannot_see_users_navigation_link(): void
@@ -56,7 +56,7 @@ class AdminUserTest extends TestCase
 
         $this->actingAs($user)->get(route('demandes.index'))
             ->assertOk()
-            ->assertDontSee('Utilisateurs')
-            ->assertDontSee(route('users.index'));
+            ->assertDontSee('Paramètres')
+            ->assertDontSee(route('settings.index'));
     }
 }

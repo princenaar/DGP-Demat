@@ -1,0 +1,6 @@
+<div class="mb-6 flex flex-wrap gap-2">
+    <a href="{{ route('settings.index') }}" class="rounded-md px-3 py-2 text-sm font-semibold {{ request()->routeIs('settings.index') ? 'bg-senegal-green text-white' : 'bg-white text-ink-700 border border-ink-100 hover:text-senegal-green' }}">Vue d'ensemble</a>
+    <a href="{{ route('settings.type-documents.index') }}" class="rounded-md px-3 py-2 text-sm font-semibold {{ request()->routeIs('settings.type-documents*') ? 'bg-senegal-green text-white' : 'bg-white text-ink-700 border border-ink-100 hover:text-senegal-green' }}">Types de demandes</a>
+    <a href="{{ route('settings.referentiels.index') }}" class="rounded-md px-3 py-2 text-sm font-semibold {{ request()->routeIs('settings.referentiels*') || request()->routeIs('settings.structures*') || request()->routeIs('settings.categories*') ? 'bg-senegal-green text-white' : 'bg-white text-ink-700 border border-ink-100 hover:text-senegal-green' }}">Référentiels</a>
+    <a href="{{ route('settings.users.index') }}" class="rounded-md px-3 py-2 text-sm font-semibold {{ request()->routeIs('settings.users*') ? 'bg-senegal-green text-white' : 'bg-white text-ink-700 border border-ink-100 hover:text-senegal-green' }}">Utilisateurs</a>
+</div>
