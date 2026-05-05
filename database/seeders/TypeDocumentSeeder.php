@@ -58,7 +58,7 @@ class TypeDocumentSeeder extends Seeder
                     'date_depart_retraite' => true,
                 ],
                 'eligibilite' => 'etatique',
-                'description' => 'Attestation réservée aux agents étatiques retraités.',
+                'description' => 'Attestation prouvant que le demandeur est libre de tout engagement.',
                 'icone' => 'shield-check',
             ],
         ];
