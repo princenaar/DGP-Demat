@@ -152,6 +152,12 @@ class DemandeStoreRequest extends FormRequest
             return;
         }
 
+        $usesE2eDatabase = str_ends_with((string) config('database.connections.sqlite.database'), 'e2e.sqlite');
+
+        if ($this->input('g-recaptcha-response') === 'e2e-valid-recaptcha' && (app()->environment('testing') || $usesE2eDatabase)) {
+            return;
+        }
+
         $secretKey = config('services.recaptcha.secret_key');
 
         if (blank($secretKey)) {

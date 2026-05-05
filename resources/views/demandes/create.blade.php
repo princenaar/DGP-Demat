@@ -4,6 +4,8 @@
     $requiredMark = '<span class="text-red-600" aria-hidden="true">*</span>';
     $oldStructureId = old('structure_id');
     $oldTypeId = old('type_document_id');
+    $usesE2eDatabase = str_ends_with((string) config('database.connections.sqlite.database'), 'e2e.sqlite');
+    $usesTestingRecaptcha = app()->environment('testing') || $usesE2eDatabase;
     $typePayload = $types->map(fn ($type) => [
         'id' => (string) $type->id,
         'nom' => $type->nom,
@@ -354,7 +356,12 @@
 
                         <div>
                             <label class="block text-sm font-medium text-gray-700">reCAPTCHA {!! $requiredMark !!}</label>
-                            @if ($recaptchaSiteKey)
+                            @if ($usesTestingRecaptcha)
+                                <input type="hidden" name="g-recaptcha-response" value="e2e-valid-recaptcha">
+                                <div class="mt-2 rounded-md border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-700">
+                                    Vérification automatisée active pour les tests.
+                                </div>
+                            @elseif ($recaptchaSiteKey)
                                 <div class="mt-2 overflow-hidden rounded-md @error('g-recaptcha-response') ring-1 ring-red-400 @enderror">
                                     <div class="g-recaptcha" data-sitekey="{{ $recaptchaSiteKey }}"></div>
                                 </div>
@@ -375,5 +382,7 @@
 @endsection
 
 @push('scripts')
-    <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+    @unless($usesTestingRecaptcha)
+        <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+    @endunless
 @endpush

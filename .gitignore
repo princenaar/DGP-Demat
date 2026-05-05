@@ -59,3 +59,6 @@ design-migration-plan.md
 update-the-design-template-vectorized-hearth.md
 /.playwright-mcp
 /outputs
+/test-results
+/playwright-report
+/database/e2e.sqlite
