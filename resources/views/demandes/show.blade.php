@@ -211,8 +211,8 @@
                     </div>
 
                     <div>
-                        <x-input-label for="commentaire" value="Commentaire" />
-                        <textarea name="commentaire" id="commentaire" x-model="commentaire" class="mt-1 block w-full rounded-md border-gray-300 focus:border-senegal-green focus:ring-senegal-green" rows="4" required></textarea>
+                        <x-input-label for="commentaire" value="Commentaire (optionnel)" />
+                        <textarea name="commentaire" id="commentaire" x-model="commentaire" class="mt-1 block w-full rounded-md border-gray-300 focus:border-senegal-green focus:ring-senegal-green" rows="4"></textarea>
                     </div>
 
                     <div>

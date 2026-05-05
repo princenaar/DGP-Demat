@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Services\DemandeNumeroGenerator;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -27,6 +28,8 @@ use Illuminate\Support\Str;
 class Demande extends Model
 {
     use HasFactory;
+
+    public const ACTIVE_DUPLICATE_MESSAGE = 'Une demande est déjà en cours de traitement pour ces informations. Vous ne pouvez pas déposer une nouvelle demande pour le moment.';
 
     protected $fillable = [
         'nom',
@@ -133,5 +136,44 @@ class Demande extends Model
     public function getReferenceDocumentAttribute(): string
     {
         return 'N° <b>'.e($this->numero_affiche).'</b> MSHP/DRH/DGP/'.e($this->initiales_agent);
+    }
+
+    public function scopeActive(Builder $query): Builder
+    {
+        return $query->whereRelation('etatDemande', fn (Builder $query): Builder => $query
+            ->whereNotIn('nom', [
+                EtatDemande::SIGNEE,
+                EtatDemande::SUSPENDUE,
+            ]));
+    }
+
+    public function scopeForIdentity(Builder $query, string $nin, ?string $matricule): Builder
+    {
+        $matricule = self::normalizeMatricule($matricule);
+
+        return $query->where(function (Builder $query) use ($nin, $matricule): void {
+            $query->where('nin', $nin);
+
+            if ($matricule !== null) {
+                $query->orWhereRaw('UPPER(matricule) = ?', [$matricule]);
+            }
+        });
+    }
+
+    public static function hasActiveForIdentity(string $nin, ?string $matricule): bool
+    {
+        return self::query()
+            ->active()
+            ->forIdentity($nin, $matricule)
+            ->exists();
+    }
+
+    public static function normalizeMatricule(?string $matricule): ?string
+    {
+        if (blank($matricule)) {
+            return null;
+        }
+
+        return Str::upper(trim($matricule));
     }
 }

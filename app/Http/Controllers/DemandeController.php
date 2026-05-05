@@ -15,8 +15,11 @@ use App\Services\DemandeEtatFilter;
 use App\Services\DemandeMailService;
 use App\Services\WorkflowEngine;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Contracts\Cache\Lock;
+use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
@@ -41,9 +44,21 @@ class DemandeController extends Controller
      */
     public function store(DemandeStoreRequest $request)
     {
-        DB::beginTransaction();
+        $locks = [];
+        $transactionStarted = false;
 
         try {
+            $locks = $this->acquireIdentityLocks($request);
+
+            if (Demande::hasActiveForIdentity((string) $request->nin, $request->matricule)) {
+                return back()
+                    ->withInput($request->except(['fichiers', 'g-recaptcha-response']))
+                    ->withErrors(['nin' => Demande::ACTIVE_DUPLICATE_MESSAGE]);
+            }
+
+            DB::beginTransaction();
+            $transactionStarted = true;
+
             // Création de la demande
             $demande = Demande::create([
                 'type_document_id' => $request->type_document_id,
@@ -69,19 +84,40 @@ class DemandeController extends Controller
 
             DB::commit();
 
-            // Envoi de la notification par mail
-            DemandeMailService::envoyer(
-                $demande,
-                'Confirmation de votre demande',
-                'Votre demande a bien été enregistrée sous le numéro '.$demande->numero_affiche.'. Elle est en cours de traitement.'
-            );
+            $successMessage = 'Votre demande a été enregistrée avec succès sous le numéro '.$demande->numero_affiche.'.';
 
-            return redirect()->route('demandes.create')->with('success', 'Votre demande a été enregistrée avec succès sous le numéro '.$demande->numero_affiche.'.');
+            try {
+                DemandeMailService::envoyer(
+                    $demande,
+                    'Confirmation de votre demande',
+                    'Votre demande a bien été enregistrée sous le numéro '.$demande->numero_affiche.'. Elle est en cours de traitement.'
+                );
+            } catch (Throwable $e) {
+                report($e);
+
+                return redirect()->route('demandes.create')->with([
+                    'success' => $successMessage,
+                    'warning' => 'L’email de confirmation n’a pas pu être envoyé pour le moment. Conservez le numéro affiché.',
+                ]);
+            }
+
+            return redirect()->route('demandes.create')->with('success', $successMessage);
+        } catch (LockTimeoutException) {
+            return back()
+                ->withInput($request->except(['fichiers', 'g-recaptcha-response']))
+                ->withErrors(['nin' => Demande::ACTIVE_DUPLICATE_MESSAGE]);
         } catch (Throwable $e) {
-            DB::rollBack();
+            if ($transactionStarted) {
+                DB::rollBack();
+            }
+
             report($e);
 
-            return back()->withErrors(['error' => 'Une erreur est survenue. Veuillez réessayer.']);
+            return back()
+                ->withInput($request->except(['fichiers', 'g-recaptcha-response']))
+                ->withErrors(['error' => 'Une erreur est survenue. Veuillez réessayer.']);
+        } finally {
+            $this->releaseIdentityLocks($locks);
         }
     }
 
@@ -136,9 +172,13 @@ class DemandeController extends Controller
     {
         $validated = $request->validate([
             'nouvel_etat' => 'required|string',
-            'commentaire' => 'required|string',
+            'commentaire' => 'nullable|string',
             'agent_id' => 'nullable|exists:users,id',
         ]);
+
+        $validated['commentaire'] = filled($validated['commentaire'] ?? null)
+            ? $validated['commentaire']
+            : 'Sans commentaire';
 
         $etatFinal = EtatDemande::where('nom', $validated['nouvel_etat'])->first();
 
@@ -243,6 +283,53 @@ class DemandeController extends Controller
                     'taille' => $fichier->getSize(),
                 ]);
             }
+        }
+    }
+
+    /**
+     * @return array<int, Lock>
+     *
+     * @throws LockTimeoutException
+     */
+    private function acquireIdentityLocks(DemandeStoreRequest $request): array
+    {
+        $keys = [
+            'demande-submission:nin:'.sha1((string) $request->nin),
+        ];
+
+        $matricule = Demande::normalizeMatricule($request->matricule);
+
+        if ($matricule !== null) {
+            $keys[] = 'demande-submission:matricule:'.sha1($matricule);
+        }
+
+        $keys = array_values(array_unique($keys));
+        sort($keys);
+
+        $locks = [];
+
+        try {
+            foreach ($keys as $key) {
+                $lock = Cache::lock($key, 10);
+                $lock->block(5);
+                $locks[] = $lock;
+            }
+        } catch (LockTimeoutException $e) {
+            $this->releaseIdentityLocks($locks);
+
+            throw $e;
+        }
+
+        return $locks;
+    }
+
+    /**
+     * @param  array<int, Lock>  $locks
+     */
+    private function releaseIdentityLocks(array $locks): void
+    {
+        foreach (array_reverse($locks) as $lock) {
+            $lock->release();
         }
     }
 

@@ -11,6 +11,7 @@ use App\Models\PieceRequise;
 use App\Models\Structure;
 use App\Models\TypeDocument;
 use App\Models\User;
+use App\Notifications\DemandeNotification;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Database\Seeders\CategorieSocioprofessionnelleSeeder;
 use Database\Seeders\EtatDemandeSeeder;
@@ -18,12 +19,15 @@ use Database\Seeders\RolesAndPermissionsSeeder;
 use Database\Seeders\StructureSeeder;
 use Database\Seeders\TypeDocumentSeeder;
 use Database\Seeders\WorkflowTransitionSeeder;
+use Illuminate\Contracts\Filesystem\Factory as FilesystemFactory;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
+use RuntimeException;
 use Tests\TestCase;
 
 class DemandeWorkflowTest extends TestCase
@@ -115,6 +119,215 @@ class DemandeWorkflowTest extends TestCase
 
         $fichier = FichierJustificatif::firstOrFail();
         Storage::disk('local')->assertExists($fichier->chemin);
+    }
+
+    public function test_public_user_cannot_store_new_demande_with_same_nin_when_active_demande_exists(): void
+    {
+        Http::fake([
+            'www.google.com/recaptcha/api/siteverify' => Http::response(['success' => true]),
+        ]);
+
+        $activeDemande = $this->makeDemande(EtatDemande::EN_ATTENTE, [
+            'nin' => '1234567890123',
+            'matricule' => '123456A',
+        ]);
+
+        $response = $this->from(route('demandes.create'))->post(route('demandes.store'), $this->validStorePayload([
+            'nin' => '1234567890123',
+            'matricule' => '654321B',
+        ]));
+
+        $response
+            ->assertRedirect(route('demandes.create'))
+            ->assertSessionHasErrors(['nin' => Demande::ACTIVE_DUPLICATE_MESSAGE]);
+
+        $messages = implode(' ', session('errors')->get('nin'));
+
+        $this->assertStringNotContainsString($activeDemande->numero_affiche, $messages);
+        $this->assertDatabaseMissing('demandes', [
+            'nin' => '1234567890123',
+            'matricule' => '654321B',
+        ]);
+    }
+
+    public function test_public_user_cannot_store_new_demande_with_same_matricule_when_active_demande_exists(): void
+    {
+        Http::fake([
+            'www.google.com/recaptcha/api/siteverify' => Http::response(['success' => true]),
+        ]);
+
+        $this->makeDemande(EtatDemande::RECEPTIONNEE, [
+            'nin' => '1234567890123',
+            'matricule' => '123456A',
+        ]);
+
+        $response = $this->from(route('demandes.create'))->post(route('demandes.store'), $this->validStorePayload([
+            'nin' => '9999999999999',
+            'matricule' => '123456a',
+        ]));
+
+        $response
+            ->assertRedirect(route('demandes.create'))
+            ->assertSessionHasErrors(['nin' => Demande::ACTIVE_DUPLICATE_MESSAGE]);
+
+        $this->assertDatabaseMissing('demandes', [
+            'nin' => '9999999999999',
+        ]);
+    }
+
+    public function test_public_user_can_store_new_demande_when_existing_demande_is_signed(): void
+    {
+        Notification::fake();
+        Http::fake([
+            'www.google.com/recaptcha/api/siteverify' => Http::response(['success' => true]),
+        ]);
+
+        $this->makeDemande(EtatDemande::SIGNEE, [
+            'nin' => '1234567890123',
+            'matricule' => '123456A',
+        ]);
+
+        $response = $this->post(route('demandes.store'), $this->validStorePayload([
+            'nin' => '1234567890123',
+            'matricule' => '123456A',
+        ]));
+
+        $response
+            ->assertRedirect(route('demandes.create'))
+            ->assertSessionHas('success')
+            ->assertSessionDoesntHaveErrors();
+
+        $this->assertDatabaseHas('demandes', [
+            'nom' => 'Ndiaye',
+            'nin' => '1234567890123',
+            'etat_demande_id' => EtatDemande::where('nom', EtatDemande::EN_ATTENTE)->value('id'),
+        ]);
+    }
+
+    public function test_public_user_can_store_new_demande_when_existing_demande_is_suspended(): void
+    {
+        Notification::fake();
+        Http::fake([
+            'www.google.com/recaptcha/api/siteverify' => Http::response(['success' => true]),
+        ]);
+
+        $this->makeDemande(EtatDemande::SUSPENDUE, [
+            'nin' => '1234567890123',
+            'matricule' => '123456A',
+        ]);
+
+        $response = $this->post(route('demandes.store'), $this->validStorePayload([
+            'nin' => '1234567890123',
+            'matricule' => '123456A',
+        ]));
+
+        $response
+            ->assertRedirect(route('demandes.create'))
+            ->assertSessionHas('success')
+            ->assertSessionDoesntHaveErrors();
+
+        $this->assertDatabaseHas('demandes', [
+            'nom' => 'Ndiaye',
+            'nin' => '1234567890123',
+            'etat_demande_id' => EtatDemande::where('nom', EtatDemande::EN_ATTENTE)->value('id'),
+        ]);
+    }
+
+    public function test_public_user_keeps_demande_when_confirmation_email_fails(): void
+    {
+        Storage::fake('local');
+        Http::fake([
+            'www.google.com/recaptcha/api/siteverify' => Http::response(['success' => true]),
+        ]);
+
+        $type = TypeDocument::where('code', 'TRV')->firstOrFail();
+        $structure = Structure::firstOrFail();
+
+        Notification::shouldReceive('send')
+            ->once()
+            ->withArgs(fn (object $notifiable, object $notification): bool => $notification instanceof DemandeNotification)
+            ->andThrow(new RuntimeException('SMTP indisponible'));
+
+        $response = $this->post(route('demandes.store'), [
+            'type_document_id' => $type->id,
+            'nom' => 'Diop',
+            'prenom' => 'Awa',
+            'statut' => 'étatique',
+            'nin' => '1234567890123',
+            'matricule' => '123456A',
+            'structure_id' => $structure->id,
+            'email' => 'awa.diop@example.test',
+            'telephone' => '+221 77 123 45 67',
+            'date_prise_service' => '2024-01-15',
+            'g-recaptcha-response' => 'valid-token',
+            'fichiers' => [
+                UploadedFile::fake()->create('piece.pdf', 128, 'application/pdf'),
+            ],
+        ]);
+
+        $numeroDemande = 'TRV-'.now()->format('Y').'00001';
+
+        $response
+            ->assertRedirect(route('demandes.create'))
+            ->assertSessionHas('success', "Votre demande a été enregistrée avec succès sous le numéro {$numeroDemande}.")
+            ->assertSessionHas('warning')
+            ->assertSessionDoesntHaveErrors();
+
+        $this->assertDatabaseHas('demandes', [
+            'nom' => 'Diop',
+            'prenom' => 'Awa',
+            'numero_demande' => $numeroDemande,
+        ]);
+    }
+
+    public function test_public_user_input_is_preserved_when_storage_fails_before_commit(): void
+    {
+        Http::fake([
+            'www.google.com/recaptcha/api/siteverify' => Http::response(['success' => true]),
+        ]);
+
+        $type = TypeDocument::where('code', 'TRV')->firstOrFail();
+        $structure = Structure::firstOrFail();
+        $filesystem = \Mockery::mock(FilesystemFactory::class);
+
+        $filesystem->shouldReceive('disk')
+            ->once()
+            ->with('local')
+            ->andThrow(new RuntimeException('Stockage indisponible'));
+
+        $this->app->instance(FilesystemFactory::class, $filesystem);
+
+        $response = $this->from(route('demandes.create'))->post(route('demandes.store'), [
+            'type_document_id' => $type->id,
+            'nom' => 'Diop',
+            'prenom' => 'Awa',
+            'statut' => 'étatique',
+            'nin' => '1234567890123',
+            'matricule' => '123456A',
+            'structure_id' => $structure->id,
+            'email' => 'awa.diop@example.test',
+            'telephone' => '+221 77 123 45 67',
+            'date_prise_service' => '2024-01-15',
+            'g-recaptcha-response' => 'valid-token',
+            'fichiers' => [
+                UploadedFile::fake()->create('piece.pdf', 128, 'application/pdf'),
+            ],
+        ]);
+
+        $response
+            ->assertRedirect(route('demandes.create'))
+            ->assertSessionHasErrors('error')
+            ->assertSessionHasInput([
+                'type_document_id' => (string) $type->id,
+                'nom' => 'Diop',
+                'prenom' => 'Awa',
+                'email' => 'awa.diop@example.test',
+            ]);
+
+        $this->assertDatabaseMissing('demandes', [
+            'nom' => 'Diop',
+            'prenom' => 'Awa',
+        ]);
     }
 
     public function test_demande_numbers_are_sequential_by_type_and_year(): void
@@ -240,6 +453,11 @@ class DemandeWorkflowTest extends TestCase
             'matricule',
             'telephone',
         ]);
+
+        $this->get(route('demandes.create'))
+            ->assertSee('id="validation-errors"', false)
+            ->assertSee('tabindex="-1"', false)
+            ->assertSee("document.getElementById('validation-errors')?.focus()", false);
     }
 
     public function test_store_demande_rejects_failed_recaptcha_verification(): void
@@ -439,6 +657,47 @@ class DemandeWorkflowTest extends TestCase
         $this->assertSame(EtatDemande::RECEPTIONNEE, $demande->etatDemande->nom);
         $this->assertStringContainsString('Dossier reçu', $demande->commentaire);
         $this->assertStringContainsString($accueil->name, $demande->commentaire);
+    }
+
+    public function test_state_change_modal_comment_is_optional(): void
+    {
+        $accueil = User::factory()->create();
+        $accueil->assignRole('ACCUEIL');
+        $demande = $this->makeDemande(EtatDemande::EN_ATTENTE);
+
+        $response = $this->actingAs($accueil)->get(route('demandes.show', $demande));
+
+        $response
+            ->assertOk()
+            ->assertSee('Commentaire (optionnel)')
+            ->assertDontSee('id="commentaire" x-model="commentaire" class="mt-1 block w-full rounded-md border-gray-300 focus:border-senegal-green focus:ring-senegal-green" rows="4" required', false);
+    }
+
+    public function test_state_change_without_comment_persists_default_comment(): void
+    {
+        $accueil = User::factory()->create();
+        $accueil->assignRole('ACCUEIL');
+        $demande = $this->makeDemande(EtatDemande::EN_ATTENTE);
+
+        $response = $this->actingAs($accueil)->post(route('demandes.changerEtat', $demande), [
+            'nouvel_etat' => EtatDemande::RECEPTIONNEE,
+        ]);
+
+        $response
+            ->assertRedirect(route('demandes.show', $demande))
+            ->assertSessionHas('success');
+
+        $demande->refresh();
+
+        $this->assertSame(EtatDemande::RECEPTIONNEE, $demande->etatDemande->nom);
+        $this->assertStringContainsString($accueil->name, $demande->commentaire);
+        $this->assertStringContainsString('Sans commentaire', $demande->commentaire);
+        $this->assertDatabaseHas('historique_etats', [
+            'demande_id' => $demande->id,
+            'etat_demande_id' => $demande->etat_demande_id,
+            'user_id' => $accueil->id,
+            'commentaire' => 'Sans commentaire',
+        ]);
     }
 
     public function test_invalid_state_transition_is_rejected(): void
@@ -683,5 +942,26 @@ class DemandeWorkflowTest extends TestCase
             'nin' => '1234567890123',
             'date_prise_service' => '2024-01-15',
         ], $attributes));
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    private function validStorePayload(array $overrides = []): array
+    {
+        return array_merge([
+            'type_document_id' => TypeDocument::where('code', 'TRV')->value('id'),
+            'nom' => 'Ndiaye',
+            'prenom' => 'Fatou',
+            'statut' => 'étatique',
+            'nin' => '1234567890123',
+            'matricule' => '123456A',
+            'structure_id' => Structure::value('id'),
+            'email' => 'fatou.ndiaye@example.test',
+            'telephone' => '+221 77 123 45 67',
+            'date_prise_service' => '2024-01-15',
+            'g-recaptcha-response' => 'valid-token',
+        ], $overrides);
     }
 }

@@ -27,6 +27,11 @@
             <div class="mb-6 rounded bg-senegal-green/10 border-l-4 border-senegal-green p-4 text-senegal-green font-medium">
                 {{ session('success') }}
             </div>
+            @if(session('warning'))
+                <div class="-mt-3 mb-6 rounded bg-amber-50 border-l-4 border-amber-400 p-4 text-amber-800 font-medium">
+                    {{ session('warning') }}
+                </div>
+            @endif
         @else
             <div class="bg-white rounded-lg shadow border border-gray-100 p-6 sm:p-8">
                 <div class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
@@ -37,7 +42,7 @@
                 </div>
 
                 @if ($errors->any())
-                    <div class="mt-6 rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-800" role="alert">
+                    <div id="validation-errors" class="mt-6 rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-800 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2" role="alert" tabindex="-1">
                         <p class="font-semibold">Veuillez corriger les informations signalées.</p>
                         <ul class="mt-2 list-disc space-y-1 pl-5">
                             @foreach ($errors->all() as $error)
@@ -382,6 +387,14 @@
 @endsection
 
 @push('scripts')
+    @if ($errors->any())
+        <script>
+            window.addEventListener('DOMContentLoaded', () => {
+                document.getElementById('validation-errors')?.focus();
+            });
+        </script>
+    @endif
+
     @unless($usesTestingRecaptcha)
         <script src="https://www.google.com/recaptcha/api.js" async defer></script>
     @endunless

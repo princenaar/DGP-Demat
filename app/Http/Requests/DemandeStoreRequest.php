@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Demande;
 use App\Models\TypeDocument;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
@@ -58,6 +59,7 @@ class DemandeStoreRequest extends FormRequest
                 $this->validateEligibility($validator);
                 $this->validateRequiredFiles($validator);
                 $this->validateRecaptcha($validator);
+                $this->validateActiveDuplicate($validator);
             },
         ];
     }
@@ -143,6 +145,17 @@ class DemandeStoreRequest extends FormRequest
 
         if ($hasRequiredPieces && ! $this->hasFile('fichiers')) {
             $validator->errors()->add('fichiers', 'Veuillez joindre les pièces obligatoires pour ce type de document.');
+        }
+    }
+
+    private function validateActiveDuplicate(Validator $validator): void
+    {
+        if ($validator->errors()->isNotEmpty()) {
+            return;
+        }
+
+        if (Demande::hasActiveForIdentity((string) $this->input('nin'), $this->input('matricule'))) {
+            $validator->errors()->add('nin', Demande::ACTIVE_DUPLICATE_MESSAGE);
         }
     }
 
