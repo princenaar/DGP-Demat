@@ -6,7 +6,7 @@
         {{-- Layered backdrop: existing background image, masked to top-right; soft radial; dotted grid --}}
         <div class="pointer-events-none absolute inset-0">
             <div class="absolute -right-32 -top-32 h-[480px] w-[480px] rounded-full bg-gradient-to-br from-senegal-green/10 to-transparent blur-3xl"></div>
-            <div class="absolute right-0 top-0 hidden h-full w-1/2 bg-[url('/storage/images/background.png')] bg-cover bg-center opacity-[0.06] lg:block"></div>
+            <div class="absolute right-0 top-0 hidden h-full w-1/2 bg-cover bg-center opacity-[0.06] lg:block" style="background-image: url('{{ asset('storage/images/background.png') }}');"></div>
             <div class="absolute inset-0 opacity-[0.35]"
                  style="background-image: radial-gradient(circle at 1px 1px, rgba(15,23,42,0.08) 1px, transparent 0); background-size: 28px 28px;"></div>
         </div>
