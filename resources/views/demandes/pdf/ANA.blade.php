@@ -1,10 +1,7 @@
 @extends('layouts.document')
 
-@section('numero')
-    N° <b>{{ sprintf("%05d", $demande->id) }}</b> MSHP/DRH/DGP/cald
-@endsection
 @section('title')
-    ATTESTATION DE NON ACTIVITE DANS LA FONCTION PUBLIQUE
+    ATTESTATION DE NON ENGAGEMENT
 @endsection
 @section('content')
     <p>

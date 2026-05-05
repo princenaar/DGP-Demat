@@ -9,7 +9,7 @@ Vous avez {{ $demandes->count() }} demande(s) à traiter aujourd’hui.
 | N° | Demandeur | Type | État |
 | :- | :-------- | :--- | :--- |
 @foreach($demandes as $demande)
-| [#{{ $demande->id }}]({{ route('demandes.show', $demande) }}) | {{ $demande->prenom }} {{ $demande->nom }} | {{ $demande->typeDocument->nom }} | {{ $demande->etatDemande->nom }} |
+| [{{ $demande->numero_affiche }}]({{ route('demandes.show', $demande) }}) | {{ $demande->prenom }} {{ $demande->nom }} | {{ $demande->typeDocument->nom }} | {{ $demande->etatDemande->nom }} |
 @endforeach
 @endcomponent
 

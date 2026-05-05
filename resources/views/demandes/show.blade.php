@@ -30,7 +30,7 @@
                 <div class="p-6">
                     <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                         <div>
-                            <p class="text-sm text-ink-500">Demande #{{ $demande->id }}</p>
+                            <p class="text-sm text-ink-500">Demande {{ $demande->numero_affiche }}</p>
                             <h2 class="mt-1 text-xl font-semibold text-ink-900">{{ $demande->typeDocument->nom ?? 'N/A' }}</h2>
                         </div>
                         <span class="inline-flex w-fit rounded-full px-3 py-1 text-xs font-semibold {{ $badgeClass }}">
@@ -175,7 +175,7 @@
             <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <h2 class="text-lg font-semibold text-ink-900">Aperçu du document final</h2>
                 @if($pdfBase64)
-                    <a href="data:application/pdf;base64,{{ $pdfBase64 }}" download="Demande_{{ $demande->id }}.pdf" class="inline-flex items-center justify-center rounded-md bg-senegal-green px-4 py-2 text-sm font-semibold text-white hover:bg-green-800">
+                    <a href="data:application/pdf;base64,{{ $pdfBase64 }}" download="{{ $demande->numero_affiche }}.pdf" class="inline-flex items-center justify-center rounded-md bg-senegal-green px-4 py-2 text-sm font-semibold text-white hover:bg-green-800">
                         Télécharger le PDF
                     </a>
                 @endif

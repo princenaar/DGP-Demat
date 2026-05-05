@@ -1,8 +1,5 @@
 @extends('layouts.document')
 
-@section('numero')
-    N° <b>{{ sprintf("%05d", $demande->id) }}</b> MSHP/DRH/DGP/cald
-@endsection
 @section('title')
     CERTIFICAT DE TRAVAIL
 @endsection

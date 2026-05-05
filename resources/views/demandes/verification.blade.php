@@ -16,6 +16,10 @@
             <div class="rounded-lg bg-white p-6 shadow border border-gray-100">
                 <dl class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div>
+                        <dt class="font-medium text-ink-700">Numéro de demande</dt>
+                        <dd class="text-ink-900">{{ $demande->numero_affiche }}</dd>
+                    </div>
+                    <div>
                         <dt class="font-medium text-ink-700">Nom</dt>
                         <dd class="text-ink-900">{{ $demande->nom }}</dd>
                     </div>

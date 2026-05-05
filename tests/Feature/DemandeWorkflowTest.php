@@ -117,6 +117,81 @@ class DemandeWorkflowTest extends TestCase
         Storage::disk('local')->assertExists($fichier->chemin);
     }
 
+    public function test_demande_numbers_are_sequential_by_type_and_year(): void
+    {
+        $afm = TypeDocument::where('code', 'AFM')->firstOrFail();
+        $trv = TypeDocument::where('code', 'TRV')->firstOrFail();
+
+        $premiereAfm = $this->makeDemande(EtatDemande::EN_ATTENTE, ['type_document_id' => $afm->id]);
+        $deuxiemeAfm = $this->makeDemande(EtatDemande::EN_ATTENTE, ['type_document_id' => $afm->id]);
+        $premiereTrv = $this->makeDemande(EtatDemande::EN_ATTENTE, ['type_document_id' => $trv->id]);
+        $annee = now()->format('Y');
+
+        $this->assertSame("AFM-{$annee}00001", $premiereAfm->numero_demande);
+        $this->assertSame("AFM-{$annee}00002", $deuxiemeAfm->numero_demande);
+        $this->assertSame("TRV-{$annee}00001", $premiereTrv->numero_demande);
+    }
+
+    public function test_pdf_reference_uses_business_number_and_agent_initials(): void
+    {
+        $agent = User::factory()->create([
+            'name' => 'Nom ignoré',
+            'initial' => 'ad',
+        ]);
+        $demande = $this->makeDemande(EtatDemande::VALIDEE, ['agent_id' => $agent->id]);
+
+        $html = view('demandes.pdf.TRV', [
+            'demande' => $demande->load('agent', 'typeDocument', 'categorieSocioprofessionnelle'),
+            'qrCode' => null,
+        ])->render();
+
+        $this->assertStringContainsString('N° <b>TRV-'.now()->format('Y').'00001</b> MSHP/DRH/DGP/AD', $html);
+        $this->assertStringNotContainsString('cald', $html);
+    }
+
+    public function test_pdf_reference_falls_back_to_agent_name_initials(): void
+    {
+        $agent = User::factory()->create(['name' => 'Elimane Traoré']);
+        $demande = $this->makeDemande(EtatDemande::VALIDEE, ['agent_id' => $agent->id]);
+
+        $this->assertSame('ET', $demande->initiales_agent);
+    }
+
+    public function test_signed_pdf_displays_framed_qr_with_verification_code_and_instructions(): void
+    {
+        $demande = $this->makeDemande(EtatDemande::SIGNEE, [
+            'code_qr' => 'ancien-jeton',
+            'verification_code' => 'ABCD-2345',
+        ]);
+
+        $html = view('demandes.pdf.TRV', [
+            'demande' => $demande->load('agent', 'typeDocument', 'categorieSocioprofessionnelle'),
+            'qrCode' => 'qr-content',
+        ])->render();
+
+        $this->assertStringContainsString('class="qr-box"', $html);
+        $this->assertStringContainsString('Code de vérification', $html);
+        $this->assertStringContainsString('ABCD-2345', $html);
+        $this->assertStringContainsString('Scannez ce QR code ou saisissez ce code sur la page d’accueil pour vérifier l’authenticité de cet acte.', $html);
+    }
+
+    public function test_non_engagement_pdf_uses_short_title(): void
+    {
+        $ana = TypeDocument::where('code', 'ANA')->firstOrFail();
+        $demande = $this->makeDemande(EtatDemande::VALIDEE, [
+            'type_document_id' => $ana->id,
+            'date_depart_retraite' => '2024-01-15',
+        ]);
+
+        $html = view('demandes.pdf.ANA', [
+            'demande' => $demande->load('agent', 'typeDocument', 'categorieSocioprofessionnelle'),
+            'qrCode' => null,
+        ])->render();
+
+        $this->assertStringContainsString('ATTESTATION DE NON ENGAGEMENT', $html);
+        $this->assertStringNotContainsString('ATTESTATION DE NON ACTIVITE DANS LA FONCTION PUBLIQUE', $html);
+    }
+
     public function test_etatique_demande_requires_matricule(): void
     {
         $type = TypeDocument::firstOrFail();
@@ -469,15 +544,23 @@ class DemandeWorkflowTest extends TestCase
 
     public function test_verification_page_distinguishes_valid_and_invalid_codes(): void
     {
-        $demande = $this->makeDemande(EtatDemande::SIGNEE, ['code_qr' => 'code-valide']);
+        $demande = $this->makeDemande(EtatDemande::SIGNEE, [
+            'code_qr' => 'ancien-code-valide',
+            'verification_code' => 'ABCD-2345',
+        ]);
 
-        $this->get(route('demandes.verifier', 'code-valide'))
+        $this->get(route('demandes.verifier', 'ABCD-2345'))
+            ->assertOk()
+            ->assertSee('Cette demande est authentique')
+            ->assertSee($demande->numero_affiche);
+
+        $this->get(route('demandes.verifier', 'ancien-code-valide'))
             ->assertOk()
             ->assertSee('Cette demande est authentique');
 
         $this->get(route('demandes.verifier', 'code-invalide'))
             ->assertOk()
-            ->assertSee('Code QR invalide');
+            ->assertSee('Code de vérification invalide');
     }
 
     public function test_data_endpoint_filters_agent_rows(): void
@@ -563,6 +646,9 @@ class DemandeWorkflowTest extends TestCase
 
         Pdf::shouldReceive('loadView')
             ->once()
+            ->withArgs(fn (string $view, array $data): bool => $view === 'demandes.pdf.TRV'
+                && $data['demande']->numero_affiche === 'TRV-'.now()->format('Y').'00001'
+                && $data['demande']->verification_code !== null)
             ->andReturn($pdf);
 
         $drh = User::factory()->create();
@@ -577,7 +663,8 @@ class DemandeWorkflowTest extends TestCase
         $demande->refresh();
         $this->assertSame(EtatDemande::SIGNEE, $demande->etatDemande->nom);
         $this->assertNotNull($demande->code_qr);
-        $this->assertNotNull($demande->fichier_pdf);
+        $this->assertMatchesRegularExpression('/^[A-HJ-NP-Z2-9]{4}-[A-HJ-NP-Z2-9]{4}$/', $demande->verification_code);
+        $this->assertSame('demandes_signees/TRV-'.now()->format('Y').'00001.pdf', $demande->fichier_pdf);
         Storage::disk('local')->assertExists($demande->fichier_pdf);
         Mail::assertSent(DemandeSigneeMail::class);
     }

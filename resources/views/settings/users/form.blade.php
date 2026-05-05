@@ -32,6 +32,15 @@
             </label>
 
             <label class="block text-sm font-semibold text-ink-700">
+                Initiales
+                <input name="initial" value="{{ old('initial', $user->initial) }}" placeholder="Ex. AD" class="mt-1 w-full rounded-md border-gray-300" maxlength="10">
+                <span class="mt-1 block text-xs font-normal text-ink-500">Utilisées dans la référence des documents PDF traités par un agent.</span>
+                @error('initial')
+                    <span class="mt-1 block text-xs font-semibold text-senegal-red">{{ $message }}</span>
+                @enderror
+            </label>
+
+            <label class="block text-sm font-semibold text-ink-700">
                 Adresse email professionnelle
                 <input name="email" type="email" value="{{ old('email', $user->email) }}" placeholder="Ex. awa.diop@sante.gouv.sn" class="mt-1 w-full rounded-md border-gray-300" required>
                 <span class="mt-1 block text-xs font-normal text-ink-500">Adresse utilisée pour la connexion et les liens de réinitialisation.</span>

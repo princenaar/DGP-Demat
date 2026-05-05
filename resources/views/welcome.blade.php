@@ -311,7 +311,7 @@
                                type="text"
                                required
                                autocomplete="off"
-                               placeholder="Ex. A1B2C3D4"
+                               placeholder="Ex. ABCD-2345"
                                class="flex-1 rounded-md border-0 bg-white px-4 py-3 font-mono text-sm tracking-wider text-ink-900 placeholder:text-ink-500/60 focus:ring-2 focus:ring-senegal-yellow focus:ring-offset-2 focus:ring-offset-ink-900">
                         <button type="submit"
                                 class="inline-flex items-center justify-center gap-2 rounded-md bg-senegal-yellow px-6 py-3 text-sm font-semibold text-ink-900 transition hover:-translate-y-0.5 hover:bg-yellow-300 focus:outline-none focus:ring-2 focus:ring-senegal-yellow focus:ring-offset-2 focus:ring-offset-ink-900">
