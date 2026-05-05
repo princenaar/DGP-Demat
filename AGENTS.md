@@ -168,3 +168,91 @@ This application is a Laravel application and its main Laravel ecosystems packag
 - To filter on a particular test name: `php artisan test --compact --filter=testName` (recommended after making a change to a related file).
 
 </laravel-boost-guidelines>
+
+
+<claude-mem-context>
+# Memory Context
+
+# [DGP-Demat] recent context, 2026-04-30 11:33pm UTC
+
+Legend: 🎯session 🔴bugfix 🟣feature 🔄refactor ✅change 🔵discovery ⚖️decision 🚨security_alert 🔐security_note
+Format: ID TIME TYPE TITLE
+Fetch details: get_observations([IDs]) | Search: mem-search skill
+
+Stats: 50 obs (17 216t read) | 446 549t work | 96% savings
+
+### Apr 29, 2026
+85 4:43p 🔵 LayoutPartialsTest Assertions Diverged from Template After Commit 245875e
+86 4:44p 🔴 Footer Copyright Bar Restored Portal Tagline to Fix Failing LayoutPartialsTest
+87 " ✅ DGP-Demat Full Test Suite Green After Footer Fix
+88 4:46p 🔵 DGP-Demat Repository State Before Phase 1 Upgrade
+89 " ✅ Phase 0 Changes: Ministry Rename and Mail Cleanup in DGP-Demat
+90 " ⚖️ Phase 1 Upgrade Decisions: Branching, Seeding, Audit, and Schema Strategy
+S14 User resolved all 5 Phase 1 blockers; execution plan created with task queue for Phase 0 audit and branch setup (Apr 29, 4:46 PM)
+S15 Phase 0 commit landed on feature/upgrade-v2-phase-0; awaiting user decisions on package-lock.json, build.zip gitignore, and PR push approval (Apr 29, 4:53 PM)
+91 4:54p ⚖️ Phase 1 Full Database Migration Task Plan Defined
+92 " 🔵 DemandeNotification.php Contains No English Fragments
+93 " 🔵 Phase 0 Audit: Email Templates Clean, App Locale Confirmed French
+94 4:55p 🔵 Phase 0 Audit: Breeze Auth Views Use Translation Keys, No Raw English Text
+95 " 🔵 Auth Views Use __() Universally; Legacy auth/passwords/ Subdirectory Also Exists
+96 " 🔵 All 21 Auth View Translation Keys Present in fr.json — Zero Gaps
+97 4:56p 🔵 Stray Files Inventory: package-lock.json Updated, outputs/ and build.zip Are Artifacts
+98 " 🔵 Artifact Paths Already Covered by .gitignore — No Commit Risk
+99 " ✅ Feature Branch feature/upgrade-v2-phase-0 Created
+100 " 🔵 Test Suite Green on feature/upgrade-v2-phase-0 — 65 Tests, 218 Assertions
+101 " 🔴 Pint Fixed Line Endings in DemandeComplementMail.php and DomainObjectsTest.php
+102 " ✅ Phase 0 Files Staged for Commit — package-lock.json Deliberately Excluded
+S16 Fix broken mobile navigation in DGP-Demat: public homepage nav too cramped, admin panel shows no nav at all — implement hamburger navigation (Apr 29, 4:58 PM)
+103 4:59p 🔵 .gitignore Confirmed: No Pattern Covers public/build.zip
+### Apr 30, 2026
+104 7:20a 🔵 DGP-Demat Laravel Project Structure Identified
+105 " 🔵 welcome.blade.php Homepage Content Audited Before Redesign
+106 " 🔵 CSS Setup Uses Tailwind v4 Import Syntax
+107 " 🟣 Homepage Redesigned with Modern UI and Email Delivery Messaging
+108 7:23a 🔵 DGP-Demat Uses Tailwind v3 with Senegalese Government Design System
+109 " 🔵 welcome.blade.php Extends layouts.public with Institutional Senegalese Government Layout
+110 " 🔵 "Espace agent" Exists in Three Locations Across the Public-Facing Homepage
+111 " 🔵 Bootstrap 5 Not Actually Used on Homepage Despite CLAUDE.md Stack Listing
+112 " ⚖️ Homepage Redesign Scoped to welcome.blade.php @section('content') + footer.blade.php
+113 " ⚖️ Homepage Redesign Implementation Plan Written with Fraunces Serif Font and 5-Section Layout
+114 10:29p 🔵 Mobile Navigation Missing Hamburger Menu in DGP-Demat
+115 10:30p 🔵 Root Cause: Admin Layout Uses Inline Nav with `hidden md:flex`, Ignores Existing Mobile-Ready navigation.blade.php
+116 " ⚖️ Hamburger Nav Fix Plan: Refactor Both Layouts Away from PHP String Nav Injection
+118 " ⚖️ Implementation Plan Written: Hamburger Nav via Dual `$nav`/`$navMobile` Slot Pattern in institutional-header
+119 " 🔵 Mobile Nav Bugs Identified in DGP-Demat Layouts
+120 " ⚖️ Hamburger Nav Plan: Centralize Responsive Toggle in institutional-header Partial
+117 10:31p 🔵 LayoutPartialsTest Only Covers Footer — Nav Refactor Won't Break Existing Tests
+121 10:43p 🔴 institutional-header.blade.php Refactored with Alpine Hamburger Toggle
+122 " 🔴 Public Layout Nav Fixed for Mobile with $publicNavMobile Drawer Variable
+123 " 🔴 Authenticated Layout Fixed: $authNavMobile Added to Admin Panel
+124 " 🔵 DGP-Demat Tailwind Config Uses Custom Brand Color Tokens
+125 10:44p 🔴 ink-100 Color Token Added to Tailwind Config
+126 " ✅ Full Test Suite Passes After Hamburger Nav Implementation
+S17 Logo appeared too large after hamburger nav refactor — reverted logo size to original h-16 (Apr 30, 10:44 PM)
+127 10:49p 🔴 Logo Size Reverted — Responsive Shrink Removed
+S18 Logo appeared huge after hamburger nav changes — root cause was stale compiled CSS, not the class; h-12 md:h-16 restored as final logo sizing (Apr 30, 10:49 PM)
+128 10:51p ✅ Logo Size Re-set to h-12 md:h-16 (Responsive Sizing Restored)
+S19 Style Connexion/Déconnexion as distinct buttons; decision on whether to keep or hide the login link; rename "Connexion" to "Espace administrateur" (Apr 30, 10:51 PM)
+S21 Login page navbar broken on mobile — decision needed: remove navbar or fix it; simplify login page; add back-to-home navigation (Apr 30, 10:56 PM)
+129 10:57p 🟣 "Connexion" Renamed to "Espace administrateur" and Styled as Green Pill Button
+130 " 🟣 Déconnexion Styled as Red Outline Pill Button in Authenticated Layout
+S22 Login page /login navbar broken on mobile — recommendation: remove navbar, make logo clickable, add back-to-home link; awaiting user confirmation (Apr 30, 10:58 PM)
+S20 Style Connexion/Déconnexion as distinct buttons and rename "Connexion" to "Espace administrateur" — completed and verified (Apr 30, 10:58 PM)
+131 11:05p 🔵 Login Page Uses Separate guest.blade.php Layout with Broken Mobile Nav
+132 11:08p 🟣 Institutional Header Logo Made Clickable Home Link; Hamburger Button Conditionally Rendered
+134 " ✅ Full Test Suite Passes After Login Page Simplification
+133 11:09p ✅ Login Page (guest.blade.php) Simplified: Nav Removed, Back-to-Home Link Added
+S23 Simplify login page, remove navbar, add back-to-home link, make logo clickable on all pages (Apr 30, 11:09 PM)
+**Investigated**: Login page structure and how institutional-header is used across three layouts (public, app, guest). Discovered guest layout passed its own nav that was never updated for mobile responsiveness, causing a broken hamburger experience.
+
+**Learned**: By making the hamburger button and mobile drawer conditionally rendered (only when `$navMobile` is non-empty), the institutional-header partial can serve multiple use cases: full nav on public/app layouts, clean minimal header on login. The logo-as-home-link pattern uses Alpine group styling for hover effects, signaling clickability without visual clutter. Conditional rendering prevents orphaned UI elements.
+
+**Completed**: - `institutional-header.blade.php`: Logo + ministry text wrapped in `<a href="{{ url('/') }}">` with `group` class and `aria-label="Retour à l'accueil"`; ministry text gains `group-hover:text-senegal-green transition-colors` on hover. Hamburger button wrapped in `@if($hasMobileNav)` — only renders when drawer has content. Mobile drawer also conditional via `@if($hasMobileNav)`.
+    - `guest.blade.php`: Removed `$guestNav` block entirely (3 nav links). Institutional header called with no parameters. Added "← Retour à l'accueil" link with left-arrow SVG above the login form card. Login card spacing adjusted to `mt-3` (tighter, since link above).
+    - Full test suite: 83 tests pass, 286 assertions, 0 failures. Pint: clean.
+
+**Next Steps**: Work complete for this feature. User must rebuild assets (`npm run dev` or `npm run build`) so Tailwind picks up the new utility classes (`group-hover:text-senegal-green`, `transition-colors`, `inline-flex`, `mr-1`, etc.) and the page renders correctly.
+
+
+Access 447k tokens of past work via get_observations([IDs]) or mem-search skill.
+</claude-mem-context>

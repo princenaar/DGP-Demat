@@ -15,13 +15,13 @@ class DefaultUsersSeeder extends Seeder
     {
         $admin = User::firstOrCreate([
             'email' => 'princenaar@gmail.com'], [
-            'password' => bcrypt('Passer@789'), // Hash du mot de passe
-            'name' => 'Cheikh Abdou Lahad Diagne',
-        ]);
+                'password' => bcrypt('Passer@789'), // Hash du mot de passe
+                'name' => 'Cheikh Abdou Lahad Diagne',
+            ]);
 
         // Vérifier que le rôle 'admin' existe et l'assigner
         $adminRole = Role::where('name', 'ADMIN')->first();
-        if (!$adminRole) {
+        if (! $adminRole) {
             $adminRole = Role::create(['name' => 'ADMIN']);
         }
 
@@ -29,38 +29,48 @@ class DefaultUsersSeeder extends Seeder
 
         $chefDivision = User::firstOrCreate([
             'email' => 'dameouly@gmail.com'], [
-            'password' => bcrypt('Passer@789'), // Hash du mot de passe
-            'name' => 'Dame Camara',
-        ]);
+                'password' => bcrypt('Passer@789'), // Hash du mot de passe
+                'name' => 'Dame Camara',
+            ]);
 
         $chefDivisionRole = Role::where('name', 'CHEF_DE_DIVISION')->first();
-        if (!$chefDivisionRole) {
+        if (! $chefDivisionRole) {
             $chefDivisionRole = Role::create(['name' => 'CHEF_DE_DIVISION']);
         }
 
         $chefDivision->assignRole($chefDivisionRole);
 
         $agent = User::firstOrCreate([
-            'email' => 'elymane179@gmail.com'], [
-            'password' => bcrypt('Passer@789'), // Hash du mot de passe
-            'name' => 'Elimane Traoré',
-        ]);
+            'email' => 'diagne.cal@gmail.com'], [
+                'password' => bcrypt('Passer@789'), // Hash du mot de passe
+                'name' => 'Cheikh Abdou Lahad Diagne',
+            ]);
+        $agentRole = Role::where('name', 'ACCUEIL')->first();
+        if (! $agentRole) {
+            $agentRole = Role::create(['name' => 'ACCUEIL']);
+        }
+        $agent->assignRole($agentRole);
+
+        $agent = User::firstOrCreate([
+            'email' => 'bobbopales@gmail.com'], [
+                'password' => bcrypt('Passer@789'), // Hash du mot de passe
+                'name' => 'Bobbo Bassirou',
+            ]);
         $agentRole = Role::where('name', 'AGENT')->first();
-        if (!$agentRole) {
+        if (! $agentRole) {
             $agentRole = Role::create(['name' => 'AGENT']);
         }
         $agent->assignRole($agentRole);
 
-
         $drh = User::firstOrCreate([
             'email' => 'malick.diallo@sante.gouv.sn'], [
-            'password' => bcrypt('Passer@789'), // Hash du mot de passe
-            'name' => 'Dr Malick Diallo',
-        ]);
+                'password' => bcrypt('Passer@789'), // Hash du mot de passe
+                'name' => 'Dr Malick Diallo',
+            ]);
 
         // Vérifier que le rôle 'admin' existe et l'assigner
         $drhRole = Role::where('name', 'DRH')->first();
-        if (!$drhRole) {
+        if (! $drhRole) {
             $drhRole = Role::create(['name' => 'DRH']);
         }
 

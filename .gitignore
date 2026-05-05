@@ -62,3 +62,5 @@ update-the-design-template-vectorized-hearth.md
 /test-results
 /playwright-report
 /database/e2e.sqlite
+/storage/fonts/*.json
+/.github
