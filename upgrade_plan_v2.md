@@ -118,6 +118,12 @@ Test: `tests/Feature/ResumeQuotidienTest.php` asserts `Mail::fake()` receives on
 
 **Recommendation: keep public/citizen pages on the current Blade stack; move the authenticated admin (list/show/state changes/dashboard/users/types/workflows) to Filament 3 in a follow-up project, NOT in this plan.**
 
+---
+
+## TODO Post-Production
+
+- Migrer la génération des QR codes hors `simplesoftwareio/simple-qrcode` après la mise en production. La version actuelle (`4.2.0`) est la dernière disponible et bloque `bacon/bacon-qr-code` en `^2.0`, ce qui déclenche des warnings de dépréciation PHP 8.4 pendant la génération PDF. Option pressentie : remplacer les deux appels `QrCode::size(120)->generate(...)` par une intégration maintenue, par exemple `endroid/qr-code` avec `bacon/bacon-qr-code ^3`, puis valider avec les tests PDF et un smoke test DomPDF réel.
+
 Why move admin:
 - Filament gives you Tables (replaces yajra), Forms (replaces the manual Blade+Alpine forms for admin CRUD), Resources (replaces hand-written controllers for `TypeDocument`, `PieceRequise`, `WorkflowTransition`, `CategorieSocioprofessionnelle`, `User`), Widgets (replaces the dashboard built in Phase 4), Actions (perfect fit for the `changerEtat` button row), Notifications, and Spatie role integration out of the box. Most of items 9, 12 and the type/workflow CRUD become declarative.
 - The new schema in Phase 1 is exactly the kind of data Filament shines on (relations, JSON fields, role-gated actions).
