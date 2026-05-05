@@ -73,10 +73,10 @@ class DemandeController extends Controller
             DemandeMailService::envoyer(
                 $demande,
                 'Confirmation de votre demande',
-                'Votre demande a bien été enregistrée sous le numéro '.$demande->id.'. Elle est en cours de traitement.'
+                'Votre demande a bien été enregistrée sous le numéro '.$demande->numero_affiche.'. Elle est en cours de traitement.'
             );
 
-            return redirect()->route('demandes.create')->with('success', 'Votre demande a été enregistrée avec succès sous le numéro '.$demande->id.'.');
+            return redirect()->route('demandes.create')->with('success', 'Votre demande a été enregistrée avec succès sous le numéro '.$demande->numero_affiche.'.');
         } catch (Throwable $e) {
             DB::rollBack();
             report($e);
@@ -261,10 +261,12 @@ class DemandeController extends Controller
 
     public function verifier(string $code)
     {
-        $demande = Demande::where('code_qr', $code)->first();
+        $demande = Demande::where('verification_code', $code)
+            ->orWhere('code_qr', $code)
+            ->first();
 
         if (! $demande) {
-            return view('demandes.verification')->withErrors(['Code QR invalide ou demande non authentique.']);
+            return view('demandes.verification')->withErrors(['Code de vérification invalide ou demande non authentique.']);
         }
 
         return view('demandes.verification', compact('demande'));
@@ -272,8 +274,10 @@ class DemandeController extends Controller
 
     private function generatePDF(Demande $demande): string
     {
-        if ($demande->code_qr) {
-            $qrCode = QrCode::size(100)->generate(route('demandes.verifier', $demande->code_qr));
+        $demande->loadMissing('typeDocument', 'agent', 'categorieSocioprofessionnelle');
+
+        if ($demande->verification_code) {
+            $qrCode = QrCode::size(120)->generate(route('demandes.verifier', $demande->verification_code));
         } else {
             $qrCode = null;
         }

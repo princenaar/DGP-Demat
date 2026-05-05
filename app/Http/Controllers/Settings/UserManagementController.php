@@ -51,6 +51,7 @@ class UserManagementController extends Controller
         $user = User::create([
             'name' => $validated['name'],
             'email' => $validated['email'],
+            'initial' => $validated['initial'] ?? null,
             'password' => Str::password(32),
             'is_active' => true,
         ]);
@@ -77,6 +78,7 @@ class UserManagementController extends Controller
         $user->update([
             'name' => $validated['name'],
             'email' => $validated['email'],
+            'initial' => $validated['initial'] ?? null,
         ]);
         $user->syncRoles($validated['roles']);
 

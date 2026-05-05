@@ -2,10 +2,12 @@
 
 namespace App\Models;
 
+use App\Services\DemandeNumeroGenerator;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Str;
 
 /**
  * @property-read EtatDemande|null $etat
@@ -29,6 +31,9 @@ class Demande extends Model
     protected $fillable = [
         'nom',
         'prenom',
+        'numero_demande',
+        'numero_annee',
+        'numero_sequence',
         'email',
         'telephone',
         'statut',
@@ -45,6 +50,7 @@ class Demande extends Model
         'commentaire',
         'fichier_pdf',
         'code_qr',
+        'verification_code',
     ];
 
     protected $casts = [
@@ -52,6 +58,17 @@ class Demande extends Model
         'date_fin_service' => 'datetime',
         'date_depart_retraite' => 'datetime',
     ];
+
+    protected static function booted(): void
+    {
+        static::creating(function (Demande $demande): void {
+            if ($demande->numero_demande) {
+                return;
+            }
+
+            $demande->forceFill(app(DemandeNumeroGenerator::class)->genererPour($demande));
+        });
+    }
 
     public function typeDocument()
     {
@@ -86,5 +103,35 @@ class Demande extends Model
     public function agent()
     {
         return $this->belongsTo(User::class, 'agent_id');
+    }
+
+    public function getNumeroAfficheAttribute(): string
+    {
+        return $this->numero_demande ?? (string) $this->id;
+    }
+
+    public function getInitialesAgentAttribute(): string
+    {
+        $agent = $this->agent;
+
+        if (! $agent) {
+            return 'NA';
+        }
+
+        if ($agent->initial) {
+            return $agent->initial;
+        }
+
+        $initiales = collect(preg_split('/\s+/', trim(Str::ascii($agent->name))) ?: [])
+            ->filter()
+            ->map(fn (string $part): string => Str::upper(Str::substr($part, 0, 1)))
+            ->join('');
+
+        return $initiales !== '' ? $initiales : 'NA';
+    }
+
+    public function getReferenceDocumentAttribute(): string
+    {
+        return 'N° <b>'.e($this->numero_affiche).'</b> MSHP/DRH/DGP/'.e($this->initiales_agent);
     }
 }

@@ -275,6 +275,7 @@ class AdminSettingsTest extends TestCase
             ->assertSee('Ajouter un utilisateur')
             ->assertSee('Compte applicatif')
             ->assertSee('Nom complet')
+            ->assertSee('Initiales')
             ->assertSee('Adresse email professionnelle')
             ->assertSee('Rôles applicatifs')
             ->assertSee('Réception des nouvelles demandes');
@@ -287,10 +288,12 @@ class AdminSettingsTest extends TestCase
         $this->actingAs($this->admin)->put(route('settings.users.update', $user), [
             'name' => 'Agent modifié',
             'email' => 'agent.modifie@example.test',
+            'initial' => 'am',
             'roles' => ['ACCUEIL'],
         ])->assertRedirect(route('settings.users.index'));
 
         $this->assertTrue($user->fresh()->hasRole('ACCUEIL'));
+        $this->assertSame('AM', $user->fresh()->initial);
 
         $this->post(route('settings.users.reset-password', $user->fresh()))
             ->assertRedirect(route('settings.users.index'));

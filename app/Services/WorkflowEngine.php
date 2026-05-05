@@ -20,6 +20,8 @@ use SimpleSoftwareIO\QrCode\Facades\QrCode;
 
 class WorkflowEngine
 {
+    private const VERIFICATION_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+
     public function __construct(private DemandeValidationRules $validationRules) {}
 
     /**
@@ -156,9 +158,10 @@ class WorkflowEngine
 
     private function genererPdfSigneEtNotifier(Demande $demande): null
     {
-        $demande->code_qr = Str::random(40);
+        $demande->code_qr ??= Str::random(40);
+        $demande->verification_code ??= $this->genererCodeVerification();
         $pdf = $this->generatePDF($demande);
-        $pdfPath = 'demandes_signees/Demande_'.$demande->id.'.pdf';
+        $pdfPath = 'demandes_signees/'.$demande->numero_affiche.'.pdf';
 
         $demande->fichier_pdf = $pdfPath;
         Storage::disk('local')->put($pdfPath, $pdf);
@@ -166,6 +169,27 @@ class WorkflowEngine
         Mail::to($demande->email)->send(new DemandeSigneeMail($demande, $pdfPath));
 
         return null;
+    }
+
+    private function genererCodeVerification(): string
+    {
+        do {
+            $code = $this->genererSegmentVerification().'-'.$this->genererSegmentVerification();
+        } while (Demande::where('verification_code', $code)->exists());
+
+        return $code;
+    }
+
+    private function genererSegmentVerification(): string
+    {
+        $segment = '';
+        $max = strlen(self::VERIFICATION_ALPHABET) - 1;
+
+        for ($index = 0; $index < 4; $index++) {
+            $segment .= self::VERIFICATION_ALPHABET[random_int(0, $max)];
+        }
+
+        return $segment;
     }
 
     private function transitionPour(Demande $demande, EtatDemande $cible): ?WorkflowTransition
@@ -216,8 +240,10 @@ class WorkflowEngine
 
     private function generatePDF(Demande $demande): string
     {
-        if ($demande->code_qr) {
-            $qrCode = QrCode::size(100)->generate(route('demandes.verifier', $demande->code_qr));
+        $demande->loadMissing('typeDocument', 'agent', 'categorieSocioprofessionnelle');
+
+        if ($demande->verification_code) {
+            $qrCode = QrCode::size(120)->generate(route('demandes.verifier', $demande->verification_code));
         } else {
             $qrCode = null;
         }
