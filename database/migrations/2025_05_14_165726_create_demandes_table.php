@@ -13,6 +13,9 @@ return new class extends Migration
     {
         Schema::create('demandes', function (Blueprint $table) {
             $table->id();
+            $table->string('numero_demande')->unique();
+            $table->unsignedSmallInteger('numero_annee');
+            $table->unsignedInteger('numero_sequence');
 
             // Données du demandeur
             $table->string('nom');
@@ -31,6 +34,7 @@ return new class extends Migration
                 ->nullable()
                 ->constrained('categories_socioprofessionnelles')
                 ->restrictOnDelete();
+            $table->foreignId('agent_id')->nullable()->constrained('users')->nullOnDelete();
 
             $table->date('date_prise_service')->nullable();
             $table->date('date_fin_service')->nullable();
@@ -40,8 +44,11 @@ return new class extends Migration
             $table->text('commentaire')->nullable();
             $table->string('fichier_pdf')->nullable(); // path du PDF généré
             $table->string('code_qr')->nullable();     // path ou contenu brut du QR code
+            $table->string('verification_code', 9)->nullable()->unique();
 
             $table->timestamps();
+
+            $table->unique(['type_document_id', 'numero_annee', 'numero_sequence'], 'demandes_type_year_sequence_unique');
         });
     }
 

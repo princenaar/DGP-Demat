@@ -26,7 +26,7 @@ class CategorieSocioprofessionnelleRequest extends FormRequest
         $categorie = $this->route('categorie');
 
         return [
-            'libelle' => ['required', 'string', 'max:255'],
+            'libelle' => ['required', 'string', 'max:255', Rule::unique('categories_socioprofessionnelles', 'libelle')->ignore($categorie?->id)],
             'code' => ['required', 'string', 'max:255', Rule::unique('categories_socioprofessionnelles', 'code')->ignore($categorie?->id)],
             'ordre' => ['required', 'integer', 'min:0'],
         ];

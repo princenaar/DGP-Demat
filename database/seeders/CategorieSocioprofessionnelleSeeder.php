@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Models\CategorieSocioprofessionnelle;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Str;
 
 class CategorieSocioprofessionnelleSeeder extends Seeder
 {
@@ -12,24 +13,92 @@ class CategorieSocioprofessionnelleSeeder extends Seeder
      */
     public function run(): void
     {
-        $categories = [
-            ['libelle' => 'Médecin', 'code' => 'MEDECIN'],
-            ['libelle' => 'Infirmier', 'code' => 'INFIRMIER'],
-            ['libelle' => 'Sage-femme', 'code' => 'SAGE_FEMME'],
-            ['libelle' => 'Administratif', 'code' => 'ADMINISTRATIF'],
-            ['libelle' => 'Technicien', 'code' => 'TECHNICIEN'],
-            ['libelle' => 'Ouvrier', 'code' => 'OUVRIER'],
-            ['libelle' => 'Autre', 'code' => 'AUTRE'],
-        ];
+        $usedCodes = [];
 
-        foreach ($categories as $index => $categorie) {
+        foreach ($this->categories() as $index => $libelle) {
             CategorieSocioprofessionnelle::updateOrCreate(
-                ['libelle' => $categorie['libelle']],
+                ['libelle' => $libelle],
                 [
-                    'code' => $categorie['code'],
+                    'code' => $this->uniqueCodeFor($libelle, $usedCodes),
                     'ordre' => $index + 1,
                 ]
             );
         }
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function categories(): array
+    {
+        return $this->readCsvColumn(__DIR__.'/data/categories_socioprofessionnelles.csv', 'Catégorie professionnelle');
+    }
+
+    /**
+     * @param  array<string, true>  $usedCodes
+     */
+    private function uniqueCodeFor(string $libelle, array &$usedCodes): string
+    {
+        $baseCode = $this->baseCodeFor($libelle);
+        $code = $baseCode;
+        $suffix = 2;
+
+        while (isset($usedCodes[$code])) {
+            $code = Str::limit($baseCode, 95, '').'_'.$suffix;
+            $suffix++;
+        }
+
+        $usedCodes[$code] = true;
+
+        return $code;
+    }
+
+    private function baseCodeFor(string $libelle): string
+    {
+        return Str::of($libelle)
+            ->ascii()
+            ->upper()
+            ->replaceMatches('/[^A-Z0-9]+/', '_')
+            ->trim('_')
+            ->limit(100, '')
+            ->value();
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function readCsvColumn(string $path, string $column): array
+    {
+        $handle = fopen($path, 'rb');
+
+        if ($handle === false) {
+            return [];
+        }
+
+        $header = array_map(
+            fn (string $value): string => preg_replace('/^\xEF\xBB\xBF/', '', $value) ?? $value,
+            fgetcsv($handle) ?: []
+        );
+        $columnIndex = array_search($column, $header ?: [], true);
+
+        if ($columnIndex === false) {
+            fclose($handle);
+
+            return [];
+        }
+
+        $values = [];
+
+        while (($row = fgetcsv($handle)) !== false) {
+            $value = trim((string) ($row[$columnIndex] ?? ''));
+
+            if ($value !== '') {
+                $values[] = $value;
+            }
+        }
+
+        fclose($handle);
+
+        return array_values(array_unique($values));
     }
 }

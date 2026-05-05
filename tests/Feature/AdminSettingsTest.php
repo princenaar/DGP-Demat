@@ -166,13 +166,13 @@ class AdminSettingsTest extends TestCase
             ->assertSee('Ordre d’affichage');
 
         $this->post(route('settings.categories.store'), [
-            'libelle' => 'Biologiste',
-            'code' => 'BIO',
+            'libelle' => 'Catégorie test préproduction',
+            'code' => 'CAT_TEST_PREPROD',
             'ordre' => 99,
         ])->assertRedirect(route('settings.referentiels.index'));
 
-        $this->assertDatabaseHas('categories_socioprofessionnelles', ['code' => 'BIO']);
-        $categorie = CategorieSocioprofessionnelle::where('code', 'BIO')->firstOrFail();
+        $this->assertDatabaseHas('categories_socioprofessionnelles', ['code' => 'CAT_TEST_PREPROD']);
+        $categorie = CategorieSocioprofessionnelle::where('code', 'CAT_TEST_PREPROD')->firstOrFail();
 
         $this->get(route('settings.categories.edit', $categorie))
             ->assertOk()
