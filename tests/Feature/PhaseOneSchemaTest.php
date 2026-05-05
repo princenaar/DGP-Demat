@@ -61,6 +61,10 @@ class PhaseOneSchemaTest extends TestCase
     public function test_phase_one_seeders_populate_categories_and_type_metadata(): void
     {
         $this->assertSame(7, CategorieSocioprofessionnelle::count());
+        $this->assertSame(
+            'Attestation de non engagement avec le ministère de la santé',
+            TypeDocument::where('code', 'ANA')->value('nom')
+        );
         $this->assertSame('etatique', TypeDocument::where('code', 'ANA')->value('eligibilite'));
         $this->assertNull(TypeDocument::where('code', 'TRV')->value('eligibilite'));
         $this->assertNotNull(TypeDocument::where('code', 'ADM')->value('description'));

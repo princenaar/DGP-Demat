@@ -52,7 +52,7 @@ class TypeDocumentSeeder extends Seeder
                 'icone' => 'clipboard-document-check',
             ],
             [
-                'nom' => 'Attestation de non activité dans la fonction publique',
+                'nom' => 'Attestation de non engagement avec le ministère de la santé',
                 'code' => 'ANA',
                 'champs_requis' => [
                     'date_depart_retraite' => true,
