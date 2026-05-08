@@ -125,6 +125,13 @@ class DomainObjectsTest extends TestCase
         $this->assertSame($demande, $mail->content()->with['demande']);
         $this->assertSame('https://example.test/complement', $mail->content()->with['url']);
         $this->assertSame([], $mail->attachments());
+
+        $html = $mail->render();
+
+        $this->assertStringContainsString('Compléter la demande', $html);
+        $this->assertStringContainsString('https://example.test/complement', $html);
+        $this->assertStringContainsString($demande->numero_affiche, $html);
+        $this->assertStringContainsString('valable pendant 3 jours', $html);
     }
 
     public function test_signed_mailable_defines_pdf_attachment(): void

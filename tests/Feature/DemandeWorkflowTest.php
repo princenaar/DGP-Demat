@@ -766,7 +766,11 @@ class DemandeWorkflowTest extends TestCase
 
         $this->get(\URL::signedRoute('demandes.edit', ['demande' => $complement->id]))
             ->assertOk()
-            ->assertViewIs('demandes.edit');
+            ->assertViewIs('demandes.edit')
+            ->assertSee('Compléter une demande')
+            ->assertSee('Rechercher une structure')
+            ->assertSee('Ajouter des pièces justificatives')
+            ->assertDontSee('g-recaptcha', false);
 
         $this->get(\URL::signedRoute('demandes.edit', ['demande' => $validee->id]))
             ->assertForbidden();
@@ -777,15 +781,16 @@ class DemandeWorkflowTest extends TestCase
         Storage::fake('local');
         $demande = $this->makeDemande(EtatDemande::COMPLEMENTS, ['nom' => 'Ancien']);
         $structure = Structure::firstOrFail();
+        $url = \URL::temporarySignedRoute('demandes.update', now()->addDays(3), ['demande' => $demande->id]);
 
-        $response = $this->put(route('demandes.update'), [
-            'id' => $demande->id,
+        $response = $this->put($url, [
+            'type_document_id' => $demande->type_document_id,
             'nom' => 'Nouveau',
             'prenom' => $demande->prenom,
             'statut' => 'contractuel',
             'nin' => $demande->nin,
             'structure_id' => $structure->id,
-            'telephone' => '771111111',
+            'telephone' => '+221 77 111 11 11',
             'fichiers' => [
                 UploadedFile::fake()->create('complement.pdf', 64, 'application/pdf'),
             ],
@@ -799,6 +804,33 @@ class DemandeWorkflowTest extends TestCase
         $this->assertSame('Nouveau', $demande->nom);
         $this->assertSame(EtatDemande::VALIDEE, $demande->etatDemande->nom);
         $this->assertDatabaseHas('fichier_justificatifs', ['nom' => 'complement.pdf']);
+    }
+
+    public function test_update_complemented_demande_requires_valid_signature_and_complement_state(): void
+    {
+        $complement = $this->makeDemande(EtatDemande::COMPLEMENTS);
+        $validee = $this->makeDemande(EtatDemande::VALIDEE);
+        $payload = [
+            'type_document_id' => $complement->type_document_id,
+            'nom' => 'Nouveau',
+            'prenom' => $complement->prenom,
+            'statut' => 'contractuel',
+            'nin' => $complement->nin,
+            'structure_id' => $complement->structure_id,
+            'telephone' => '+221 77 111 11 11',
+        ];
+
+        $this->put(route('demandes.update', $complement), $payload)
+            ->assertForbidden();
+
+        $this->put(\URL::temporarySignedRoute('demandes.update', now()->subMinute(), ['demande' => $complement->id]), $payload)
+            ->assertForbidden();
+
+        $this->put(\URL::temporarySignedRoute('demandes.update', now()->addDays(3), ['demande' => $validee->id]), array_merge($payload, [
+            'type_document_id' => $validee->type_document_id,
+            'nin' => $validee->nin,
+            'structure_id' => $validee->structure_id,
+        ]))->assertForbidden();
     }
 
     public function test_verification_page_distinguishes_valid_and_invalid_codes(): void

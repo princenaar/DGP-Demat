@@ -25,7 +25,7 @@ Route::get('/', function (Request $request, DashboardController $dashboardContro
 // Demandes routes
 Route::post('/demandes', [DemandeController::class, 'store'])->name('demandes.store');
 Route::get('/demandes/{demande}/edit', [DemandeController::class, 'edit'])->name('demandes.edit')->middleware('signed');
-Route::put('/demandes/update', [DemandeController::class, 'update'])->name('demandes.update');
+Route::put('/demandes/{demande}', [DemandeController::class, 'update'])->name('demandes.update')->middleware('signed');
 Route::get('/demandes/create', [DemandeController::class, 'create'])->name('demandes.create');
 Route::get('/demandes/verifier/{code}', [DemandeController::class, 'verifier'])->name('demandes.verifier');
 

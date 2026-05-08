@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Models\Demande;
+use App\Models\EtatDemande;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Str;
@@ -15,7 +16,7 @@ class DemandeUpdateRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return true;
+        return $this->demande()?->etatDemande?->nom === EtatDemande::COMPLEMENTS;
     }
 
     /**
@@ -26,23 +27,23 @@ class DemandeUpdateRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'nom' => ['required', 'string'],
-            'prenom' => ['required', 'string'],
-            'nin' => ['required', 'string'],
+            'type_document_id' => ['required', 'integer'],
+            'nom' => ['required', 'string', 'max:100'],
+            'prenom' => ['required', 'string', 'max:100'],
+            'nin' => ['required', 'regex:/^[0-9]{13}$/'],
             'statut' => ['required', 'string', 'in:étatique,contractuel'],
-            'matricule' => ['required_if:statut,étatique', 'string'],
+            'matricule' => ['nullable', 'required_if:statut,étatique', 'regex:/^[0-9]{6}[A-Za-z]$/'],
             'structure_id' => ['required', 'exists:structures,id'],
 
-            'telephone' => ['nullable', 'string', 'max:15'],
+            'telephone' => ['required', 'regex:/^\+221 [0-9]{2} [0-9]{3} [0-9]{2} [0-9]{2}$/'],
 
-            // Champs conditionnels potentiels
             'categorie_socioprofessionnelle_id' => ['nullable', 'exists:categories_socioprofessionnelles,id'],
             'date_prise_service' => ['nullable', 'date'],
-            'date_fin_service' => ['nullable', 'date'],
+            'date_fin_service' => ['nullable', 'date', 'after_or_equal:date_prise_service'],
             'date_depart_retraite' => ['nullable', 'date'],
 
-            // Fichiers
-            'fichiers.*' => ['nullable', 'file', 'max:5120'], // max 5Mo par fichier
+            'fichiers' => ['nullable', 'array', 'max:5'],
+            'fichiers.*' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:5120'],
         ];
     }
 
@@ -51,9 +52,42 @@ class DemandeUpdateRequest extends FormRequest
         return [
             function (Validator $validator): void {
                 $this->validateTypeDocumentFields($validator);
+                $this->validateTypeDocumentIntegrity($validator);
                 $this->validateEligibility($validator);
                 $this->validateRequiredFiles($validator);
             },
+        ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return [
+            'nin.regex' => 'Le NIN doit contenir exactement 13 chiffres.',
+            'matricule.regex' => 'Le matricule doit respecter le format 000000A.',
+            'telephone.regex' => 'Le téléphone doit respecter le format +221 00 000 00 00.',
+            'fichiers.max' => 'Vous pouvez joindre au maximum 5 fichiers.',
+            'fichiers.*.mimes' => 'Les fichiers doivent être au format PDF, JPG, JPEG ou PNG.',
+            'fichiers.*.max' => 'Chaque fichier ne doit pas dépasser 5 Mo.',
+        ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function attributes(): array
+    {
+        return [
+            'type_document_id' => 'type de document',
+            'structure_id' => 'structure',
+            'nin' => 'NIN',
+            'date_prise_service' => 'date de prise de service',
+            'date_fin_service' => 'date de fin de service',
+            'date_depart_retraite' => 'date de départ à la retraite',
+            'categorie_socioprofessionnelle_id' => 'catégorie socio-professionnelle',
+            'fichiers.*' => 'fichier',
         ];
     }
 
@@ -70,11 +104,22 @@ class DemandeUpdateRequest extends FormRequest
             $value = $this->has($field) ? $this->input($field) : $demande->{$field};
 
             if ($isRequired && blank($value)) {
-                $attribute = Str::of($field)->replace('_', ' ')->value();
+                $attribute = $this->attributes()[$field] ?? Str::of($field)->replace('_', ' ')->value();
 
                 $validator->errors()->add($field, "Le champ {$attribute} est obligatoire pour ce type de document.");
             }
         }
+    }
+
+    private function validateTypeDocumentIntegrity(Validator $validator): void
+    {
+        $demande = $this->demande();
+
+        if (! $demande || (int) $this->input('type_document_id') === $demande->type_document_id) {
+            return;
+        }
+
+        $validator->errors()->add('type_document_id', 'Le type de document ne peut pas être modifié.');
     }
 
     private function validateEligibility(Validator $validator): void
@@ -117,7 +162,13 @@ class DemandeUpdateRequest extends FormRequest
 
     private function demande(): ?Demande
     {
+        $demande = $this->route('demande');
+
+        if ($demande instanceof Demande) {
+            return $demande->loadMissing(['typeDocument.piecesRequises', 'justificatifs', 'etatDemande']);
+        }
+
         return Demande::with(['typeDocument.piecesRequises', 'justificatifs'])
-            ->find($this->input('id'));
+            ->find($demande);
     }
 }

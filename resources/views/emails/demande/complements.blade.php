@@ -1,16 +1,16 @@
-@component('mail::message')
-    # Demande de compléments
+<x-mail::message>
+# Demande de compléments
 
-    Bonjour {{ $demande->nom }} {{ $demande->prenom }},
+Bonjour {{ $demande->prenom }} {{ $demande->nom }},
 
-    Votre demande de **{{ $demande->typeDocument->nom }}** nécessite des compléments.
+Votre demande **{{ $demande->numero_affiche }}** pour le document **{{ $demande->typeDocument->nom }}** nécessite des compléments.
 
-    Cliquez sur le bouton ci-dessous pour modifier votre demande :
+Cliquez sur le bouton ci-dessous pour compléter votre dossier. Ce lien est valable pendant 3 jours.
 
-    @component('mail::button', ['url' => $lien])
-        Compléter la demande
-    @endcomponent
+<x-mail::button :url="$url" color="success">
+Compléter la demande
+</x-mail::button>
 
-    Merci,
-    L’équipe {{ config('app.name') }}
-@endcomponent
+Merci,<br>
+L’équipe {{ config('app.name') }}
+</x-mail::message>

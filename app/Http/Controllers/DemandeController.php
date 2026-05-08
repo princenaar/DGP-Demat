@@ -22,6 +22,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\URL;
 use Illuminate\View\View;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
 use Throwable;
@@ -232,33 +233,33 @@ class DemandeController extends Controller
             abort(403, 'Cette demande ne peut pas être modifiée.');
         }
 
-        $demande->loadMissing('typeDocument.piecesRequises');
+        $demande->loadMissing('typeDocument.piecesRequises', 'justificatifs');
 
         $structures = Structure::all();
         $categoriesSocioprofessionnelles = CategorieSocioprofessionnelle::orderBy('ordre')->get();
+        $formAction = URL::temporarySignedRoute('demandes.update', now()->addDays(3), ['demande' => $demande->id]);
 
-        return view('demandes.edit', compact('demande', 'structures', 'categoriesSocioprofessionnelles'));
+        return view('demandes.edit', compact('demande', 'structures', 'categoriesSocioprofessionnelles', 'formAction'));
     }
 
     /**
      * Met à jour la demande.
      *
      * @param  Request  $request
-     * @param  Demande  $demande
      * @return RedirectResponse
      */
-    public function update(DemandeUpdateRequest $request)
+    public function update(DemandeUpdateRequest $request, Demande $demande)
     {
-        // Recuperation de la demande
-        $demande = Demande::findOrFail($request->id);
-        // Changer l'état de la demande (VALIDÉE à nouveau)
+        if ($demande->etatDemande->nom !== EtatDemande::COMPLEMENTS) {
+            abort(403, 'Cette demande ne peut pas être modifiée.');
+        }
+
+        $demande->fill($request->safe()->except(['fichiers', 'type_document_id']));
         $demande->etat_demande_id = EtatDemande::where('nom', EtatDemande::VALIDEE)->value('id');
-        // Mettre à jour les champs validés
-        $demande->update($request->validated());
-        // Mettre à jour les fichiers justificatifs
+        $demande->save();
+
         $this->saveFile($request, $demande);
 
-        // Rediriger vers la page de création de demande avec un message de succès (update not accessible unsigned)
         return redirect()->route('demandes.create')
             ->with('success', 'Votre demande a bien été mise à jour.');
     }
