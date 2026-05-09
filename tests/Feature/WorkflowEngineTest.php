@@ -85,7 +85,10 @@ class WorkflowEngineTest extends TestCase
             'etat_demande_id' => $cible->id,
             'user_id' => $agent->id,
         ]);
-        Mail::assertSent(DemandeComplementMail::class);
+        Mail::assertSent(
+            DemandeComplementMail::class,
+            fn (DemandeComplementMail $mail): bool => $mail->commentaireAgent === 'Pièces manquantes'
+        );
     }
 
     public function test_automatic_validation_transition_runs_when_enabled_and_rules_pass(): void

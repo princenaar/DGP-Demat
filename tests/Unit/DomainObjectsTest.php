@@ -118,12 +118,13 @@ class DomainObjectsTest extends TestCase
     public function test_complement_mailable_exposes_markdown_content(): void
     {
         $demande = $this->makeDemande();
-        $mail = new DemandeComplementMail($demande, 'https://example.test/complement');
+        $mail = new DemandeComplementMail($demande, 'https://example.test/complement', 'Veuillez ajouter la copie de la pièce d’identité.');
 
         $this->assertSame('Demande de compléments', $mail->envelope()->subject);
         $this->assertSame('emails.demande.complements', $mail->content()->markdown);
         $this->assertSame($demande, $mail->content()->with['demande']);
         $this->assertSame('https://example.test/complement', $mail->content()->with['url']);
+        $this->assertSame('Veuillez ajouter la copie de la pièce d’identité.', $mail->content()->with['commentaireAgent']);
         $this->assertSame([], $mail->attachments());
 
         $html = $mail->render();
@@ -132,6 +133,8 @@ class DomainObjectsTest extends TestCase
         $this->assertStringContainsString('https://example.test/complement', $html);
         $this->assertStringContainsString($demande->numero_affiche, $html);
         $this->assertStringContainsString('valable pendant 3 jours', $html);
+        $this->assertStringContainsString('Compléments attendus', $html);
+        $this->assertStringContainsString('Veuillez ajouter la copie de la pièce d’identité.', $html);
     }
 
     public function test_signed_mailable_defines_pdf_attachment(): void

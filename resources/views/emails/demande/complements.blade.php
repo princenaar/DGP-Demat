@@ -5,6 +5,13 @@ Bonjour {{ $demande->prenom }} {{ $demande->nom }},
 
 Votre demande **{{ $demande->numero_affiche }}** pour le document **{{ $demande->typeDocument->nom }}** nécessite des compléments.
 
+@if(filled($commentaireAgent))
+## Compléments attendus
+
+{{ $commentaireAgent }}
+
+@endif
+
 Cliquez sur le bouton ci-dessous pour compléter votre dossier. Ce lien est valable pendant 3 jours.
 
 <x-mail::button :url="$url" color="success">

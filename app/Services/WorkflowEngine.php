@@ -102,7 +102,7 @@ class WorkflowEngine
         $commentaireAutomatique = match ($cible->nom) {
             EtatDemande::RECEPTIONNEE => $this->autoImputerSiConfigure($demande),
             EtatDemande::VALIDEE => $this->imputerDepuisPayload($demande, $payload),
-            EtatDemande::COMPLEMENTS => $this->envoyerDemandeComplements($demande),
+            EtatDemande::COMPLEMENTS => $this->envoyerDemandeComplements($demande, $commentaire),
             EtatDemande::SIGNEE => $this->genererPdfSigneEtNotifier($demande),
             default => null,
         };
@@ -143,7 +143,7 @@ class WorkflowEngine
         return null;
     }
 
-    private function envoyerDemandeComplements(Demande $demande): null
+    private function envoyerDemandeComplements(Demande $demande, ?string $commentaireAgent = null): null
     {
         $lien = URL::temporarySignedRoute(
             'demandes.edit',
@@ -151,7 +151,7 @@ class WorkflowEngine
             ['demande' => $demande->id]
         );
 
-        Mail::to($demande->email)->send(new DemandeComplementMail($demande, $lien));
+        Mail::to($demande->email)->send(new DemandeComplementMail($demande, $lien, $commentaireAgent));
 
         return null;
     }

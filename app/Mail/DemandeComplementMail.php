@@ -17,10 +17,11 @@ class DemandeComplementMail extends Mailable
     /**
      * Create a new message instance.
      */
-    public function __construct(public Demande $demande, public string $lien)
-    {
-        //
-    }
+    public function __construct(
+        public Demande $demande,
+        public string $lien,
+        public ?string $commentaireAgent = null,
+    ) {}
 
     /**
      * Get the message envelope.
@@ -42,6 +43,7 @@ class DemandeComplementMail extends Mailable
             with: [
                 'demande' => $this->demande,
                 'url' => $this->lien,
+                'commentaireAgent' => $this->commentaireAgent,
             ],
         );
 
