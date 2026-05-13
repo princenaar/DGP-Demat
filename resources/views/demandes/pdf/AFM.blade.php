@@ -6,10 +6,10 @@
 
 @section('content')
     <p>
-        Je soussignée, Monsieur le Directeur des Ressources humaines, atteste que Mme/M.
+        Je soussigné, Monsieur le Directeur des Ressources humaines, atteste que Mme/M.
         <strong>{{ $demande->prenom }}</strong> <strong>{{ strtoupper($demande->nom) }}</strong>,
         {{ $demande->categorieSocioprofessionnelle?->libelle }}, @if($demande->statut === 'contractuel')
-            contractuel,
+            contractuel(le),
         @elseif($demande->statut === 'étatique')
             matricule de solde n° <strong>{{ $demande->matricule }},</strong>
         @endif

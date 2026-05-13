@@ -8,7 +8,7 @@
         Je soussigné, Monsieur le Directeur des Ressources humaines, atteste que <strong>M./Mme {{ $demande->prenom }}
             {{ $demande->nom }}</strong>, {{ $demande->categorieSocioprofessionnelle?->libelle }}
         , @if($demande->statut === 'contractuel')
-            contractuel,
+            contractuel(le),
         @elseif($demande->statut === 'étatique')
             matricule de solde n° <strong>{{ $demande->matricule }},</strong>
         @endif a fait valoir ses droits à une pension de retraite à la date du

@@ -5,10 +5,10 @@
 @endsection
 @section('content')
     <p>
-        Je soussignée, Madame le Directeur des Ressources humaines, certifie que <strong>M./Mme {{ $demande->prenom }}
+        Je soussigné, Monsieur le Directeur des Ressources humaines, certifie que <strong>M./Mme {{ $demande->prenom }}
             {{ $demande->nom }}</strong>, {{ $demande->categorieSocioprofessionnelle?->libelle }}
         , @if($demande->statut === 'contractuel')
-            contractuel,
+            contractuel(le),
         @elseif($demande->statut === 'étatique')
             matricule de solde n° <strong>{{ $demande->matricule }},</strong>
         @endif est en service au Ministère de la Santé et de l'Hygiène publique depuis le
