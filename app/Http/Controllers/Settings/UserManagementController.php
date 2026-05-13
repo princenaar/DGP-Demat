@@ -6,9 +6,11 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Settings\UserRequest;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
+use Throwable;
 use Yajra\DataTables\Facades\DataTables;
 
 class UserManagementController extends Controller
@@ -48,16 +50,38 @@ class UserManagementController extends Controller
     {
         $validated = $request->validated();
 
-        $user = User::create([
-            'name' => $validated['name'],
-            'email' => $validated['email'],
-            'initial' => $validated['initial'] ?? null,
-            'password' => Str::password(32),
-            'is_active' => true,
-        ]);
-        $user->syncRoles($validated['roles']);
+        DB::beginTransaction();
 
-        Password::sendResetLink(['email' => $user->email]);
+        try {
+            $user = User::create([
+                'name' => $validated['name'],
+                'email' => $validated['email'],
+                'initial' => $validated['initial'] ?? null,
+                'password' => Str::password(32),
+                'is_active' => true,
+            ]);
+            $user->syncRoles($validated['roles']);
+
+            $status = Password::sendResetLink(['email' => $user->email]);
+
+            if ($status !== Password::ResetLinkSent) {
+                DB::rollBack();
+
+                return back()
+                    ->withInput()
+                    ->with('error', 'Utilisateur non créé : le lien de définition du mot de passe n’a pas pu être envoyé.');
+            }
+
+            DB::commit();
+        } catch (Throwable $exception) {
+            DB::rollBack();
+
+            report($exception);
+
+            return back()
+                ->withInput()
+                ->with('error', 'Utilisateur non créé : le lien de définition du mot de passe n’a pas pu être envoyé.');
+        }
 
         return redirect()->route('settings.users.index')->with('status', 'Utilisateur créé. Un lien de réinitialisation a été envoyé.');
     }

@@ -4,11 +4,14 @@
 
         <!-- Password Reset Token -->
         <input type="hidden" name="token" value="{{ $request->route('token') }}">
+        <input type="hidden" name="email" value="{{ $request->email }}">
 
         <!-- Email Address -->
         <div>
-            <x-input-label for="email" :value="__('Email')" />
-            <x-text-input id="email" class="block mt-1 w-full" type="email" name="email" :value="old('email', $request->email)" required autofocus autocomplete="username" />
+            <x-input-label for="email_display" :value="__('Email')" />
+            <p id="email_display" class="mt-1 rounded-md border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-700">
+                {{ $request->email }}
+            </p>
             <x-input-error :messages="$errors->get('email')" class="mt-2" />
         </div>
 

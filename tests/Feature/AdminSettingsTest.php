@@ -17,6 +17,7 @@ use Database\Seeders\WorkflowTransitionSeeder;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Password;
 use Tests\TestCase;
 
 class AdminSettingsTest extends TestCase
@@ -231,6 +232,48 @@ class AdminSettingsTest extends TestCase
         $this->actingAs($user)->getJson(route('settings.structures.data'))->assertForbidden();
         $this->actingAs($user)->getJson(route('settings.categories.data'))->assertForbidden();
         $this->actingAs($user)->getJson(route('settings.etats.data'))->assertForbidden();
+    }
+
+    public function test_admin_can_create_user_and_send_password_definition_link(): void
+    {
+        Notification::fake();
+
+        $this->actingAs($this->admin)->post(route('settings.users.store'), [
+            'name' => 'Agent créé',
+            'email' => 'agent.cree@example.test',
+            'initial' => 'ac',
+            'roles' => ['AGENT'],
+        ])
+            ->assertRedirect(route('settings.users.index'))
+            ->assertSessionHas('status', 'Utilisateur créé. Un lien de réinitialisation a été envoyé.');
+
+        $user = User::where('email', 'agent.cree@example.test')->firstOrFail();
+
+        $this->assertTrue($user->is_active);
+        $this->assertSame('AC', $user->initial);
+        $this->assertTrue($user->hasRole('AGENT'));
+        Notification::assertSentTo($user, ResetPassword::class);
+    }
+
+    public function test_user_is_not_created_when_password_definition_link_cannot_be_sent(): void
+    {
+        Password::shouldReceive('sendResetLink')
+            ->once()
+            ->with(['email' => 'agent.echec@example.test'])
+            ->andReturn('passwords.user');
+
+        $this->actingAs($this->admin)->post(route('settings.users.store'), [
+            'name' => 'Agent échec',
+            'email' => 'agent.echec@example.test',
+            'initial' => 'ae',
+            'roles' => ['AGENT'],
+        ])
+            ->assertRedirect()
+            ->assertSessionHas('error', 'Utilisateur non créé : le lien de définition du mot de passe n’a pas pu être envoyé.');
+
+        $this->assertDatabaseMissing('users', [
+            'email' => 'agent.echec@example.test',
+        ]);
     }
 
     public function test_used_referentials_cannot_be_deleted(): void
