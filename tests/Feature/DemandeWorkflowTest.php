@@ -405,6 +405,34 @@ class DemandeWorkflowTest extends TestCase
         $this->assertStringNotContainsString('ATTESTATION DE NON ACTIVITE DANS LA FONCTION PUBLIQUE', $html);
     }
 
+    public function test_motivation_fund_pdf_adds_annual_period_for_contractuels_only(): void
+    {
+        $afm = TypeDocument::where('code', 'AFM')->firstOrFail();
+        $annualPeriod = 'pour la période du 1<sup>er</sup> janvier au 31 décembre '.now()->format('Y');
+
+        $contractuel = $this->makeDemande(EtatDemande::VALIDEE, [
+            'type_document_id' => $afm->id,
+            'statut' => 'contractuel',
+        ]);
+        $etatique = $this->makeDemande(EtatDemande::VALIDEE, [
+            'type_document_id' => $afm->id,
+            'statut' => 'étatique',
+            'matricule' => '123456A',
+        ]);
+
+        $contractuelHtml = view('demandes.pdf.AFM', [
+            'demande' => $contractuel->load('agent', 'typeDocument', 'categorieSocioprofessionnelle'),
+            'qrCode' => null,
+        ])->render();
+        $etatiqueHtml = view('demandes.pdf.AFM', [
+            'demande' => $etatique->load('agent', 'typeDocument', 'categorieSocioprofessionnelle'),
+            'qrCode' => null,
+        ])->render();
+
+        $this->assertStringContainsString($annualPeriod, $contractuelHtml);
+        $this->assertStringNotContainsString($annualPeriod, $etatiqueHtml);
+    }
+
     public function test_etatique_demande_requires_matricule(): void
     {
         $type = TypeDocument::firstOrFail();
