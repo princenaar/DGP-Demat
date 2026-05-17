@@ -5,7 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
@@ -27,7 +27,6 @@ class TypeDocument extends Model
         'code',
         'champs_requis',
         'eligibilite',
-        'default_agent_id',
         'description',
         'icone',
     ];
@@ -41,9 +40,9 @@ class TypeDocument extends Model
         return $this->hasMany(Demande::class);
     }
 
-    public function defaultAgent(): BelongsTo
+    public function defaultAgents(): BelongsToMany
     {
-        return $this->belongsTo(User::class, 'default_agent_id');
+        return $this->belongsToMany(User::class, 'type_document_default_agents')->withTimestamps();
     }
 
     public function piecesRequises(): HasMany

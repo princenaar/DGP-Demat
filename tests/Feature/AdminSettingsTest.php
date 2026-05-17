@@ -65,7 +65,7 @@ class AdminSettingsTest extends TestCase
             ->assertSee('Paramétrage métier')
             ->assertSee('Nom affiché au demandeur')
             ->assertSee('Code métier')
-            ->assertSee('Agent par défaut pour l’imputation automatique')
+            ->assertSee('Agents par défaut pour la file partagée')
             ->assertSee('Champs requis pour la validation automatique');
 
         $this->actingAs($this->admin)->post(route('settings.type-documents.store'), [
@@ -74,12 +74,12 @@ class AdminSettingsTest extends TestCase
             'description' => 'Description',
             'icone' => 'file-check',
             'eligibilite' => 'contractuel',
-            'default_agent_id' => $agent->id,
+            'default_agent_ids' => [$agent->id],
             'champs_requis' => ['date_prise_service' => true],
         ])->assertRedirect(route('settings.type-documents.index'));
 
         $type = TypeDocument::where('code', 'AUT')->firstOrFail();
-        $this->assertSame($agent->id, $type->default_agent_id);
+        $this->assertTrue($type->defaultAgents->first()->is($agent));
         $this->assertTrue($type->champs_requis['date_prise_service']);
 
         $this->get(route('settings.type-documents.pieces.index', $type))
@@ -127,6 +127,32 @@ class AdminSettingsTest extends TestCase
             'role_requis' => 'ACCUEIL',
             'automatique' => true,
         ]);
+    }
+
+    public function test_ane_keeps_reserved_code_and_external_eligibility_when_updated(): void
+    {
+        $ane = TypeDocument::where('code', 'ANE')->firstOrFail();
+
+        $this->actingAs($this->admin)->get(route('settings.type-documents.edit', $ane))
+            ->assertOk()
+            ->assertSee('value="ANE"', false)
+            ->assertSee('value="Externe"', false)
+            ->assertDontSee('<option value="externe"', false);
+
+        $this->actingAs($this->admin)->put(route('settings.type-documents.update', $ane), [
+            'nom' => $ane->nom,
+            'code' => 'AUTRE',
+            'description' => $ane->description,
+            'icone' => $ane->icone,
+            'eligibilite' => 'contractuel',
+            'champs_requis' => ['date_depart_retraite' => true],
+        ])->assertRedirect(route('settings.type-documents.index'));
+
+        $ane->refresh();
+
+        $this->assertSame('ANE', $ane->code);
+        $this->assertSame('externe', $ane->eligibilite);
+        $this->assertSame([], $ane->champs_requis);
     }
 
     public function test_admin_can_manage_referentials_and_etats_are_read_only(): void

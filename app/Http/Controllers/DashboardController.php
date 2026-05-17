@@ -44,7 +44,7 @@ class DashboardController extends Controller
         return DataTables::of($demandes)
             ->addColumn('etat', fn (Demande $demande): string => $demande->etatDemande->nom)
             ->addColumn('type', fn (Demande $demande): string => $demande->typeDocument->nom)
-            ->addColumn('structure', fn (Demande $demande): string => $demande->structure->nom ?? '-')
+            ->addColumn('structure', fn (Demande $demande): string => $demande->typeDocument->code === 'ANE' ? '-' : ($demande->structure->nom ?? '-'))
             ->addColumn('actions', fn (Demande $demande): string => view('demandes.partials.actions', compact('demande'))->render())
             ->rawColumns(['actions'])
             ->make();

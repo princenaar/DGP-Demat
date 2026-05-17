@@ -49,7 +49,7 @@ class WorkflowEngine
             return false;
         }
 
-        if ($cible->nom === EtatDemande::COMPLEMENTS && $demande->agent_id !== $user->id) {
+        if ($transition->role_requis === 'AGENT' && ! $this->agentPeutTraiter($demande, $user)) {
             return false;
         }
 
@@ -62,11 +62,19 @@ class WorkflowEngine
     public function transitionner(Demande $demande, EtatDemande $cible, User $user, array $payload = []): Demande
     {
         return DB::transaction(function () use ($demande, $cible, $user, $payload): Demande {
+            $demande = Demande::query()->whereKey($demande->id)->lockForUpdate()->firstOrFail();
+
             if (! $this->peut($demande, $cible, $user)) {
                 abort(403, 'Action non autorisée.');
             }
 
+            $commentairePriseEnCharge = $this->revendiquerSiNecessaire($demande, $cible, $user);
             $this->appliquerTransition($demande, $cible, $user, $payload);
+
+            if ($commentairePriseEnCharge) {
+                $this->enregistrerHistorique($demande, $user, $commentairePriseEnCharge);
+            }
+
             $this->declencherTransitionsAutomatiques($demande, $user);
 
             return $demande->refresh();
@@ -100,7 +108,7 @@ class WorkflowEngine
         }
 
         $commentaireAutomatique = match ($cible->nom) {
-            EtatDemande::RECEPTIONNEE => $this->autoImputerSiConfigure($demande),
+            EtatDemande::RECEPTIONNEE => null,
             EtatDemande::VALIDEE => $this->imputerDepuisPayload($demande, $payload),
             EtatDemande::COMPLEMENTS => $this->envoyerDemandeComplements($demande, $commentaire),
             EtatDemande::SIGNEE => $this->genererPdfSigneEtNotifier($demande),
@@ -115,20 +123,6 @@ class WorkflowEngine
         if ($commentaireAutomatique) {
             $this->enregistrerHistorique($demande, $user, $commentaireAutomatique);
         }
-    }
-
-    private function autoImputerSiConfigure(Demande $demande): ?string
-    {
-        $demande->loadMissing('typeDocument.defaultAgent');
-        $agent = $demande->typeDocument?->defaultAgent;
-
-        if (! $agent) {
-            return null;
-        }
-
-        $demande->agent_id = $agent->id;
-
-        return "Demande imputée automatiquement à {$agent->name}.";
     }
 
     /**
@@ -200,6 +194,19 @@ class WorkflowEngine
 
     private function declencherTransitionsAutomatiques(Demande $demande, User $user): void
     {
+        if ($demande->etatDemande?->nom === EtatDemande::RECEPTIONNEE && $this->aDesAgentsParDefautActifs($demande)) {
+            $transitionValidation = $this->transitionsFor($demande)
+                ->first(fn (WorkflowTransition $transition): bool => $transition->etatCible?->nom === EtatDemande::VALIDEE);
+
+            if ($transitionValidation) {
+                $this->appliquerTransition($demande, $transitionValidation->etatCible, $user, [
+                    'commentaire' => 'Validation automatique : file partagée configurée.',
+                ]);
+            }
+
+            return;
+        }
+
         $transition = $this->transitionsFor($demande)
             ->first(fn (WorkflowTransition $transition): bool => $transition->automatique && $this->gardeAutomatiquePasse($demande, $transition));
 
@@ -226,6 +233,50 @@ class WorkflowEngine
         $ancienCommentaire = $demande->commentaire ?? '';
         $nouveauCommentaire = now()->format('d/m/Y H:i').' - '.$user->name.' : '.$commentaire;
         $demande->commentaire = trim($ancienCommentaire."\n".$nouveauCommentaire);
+    }
+
+    private function agentPeutTraiter(Demande $demande, User $user): bool
+    {
+        if ($demande->agent_id !== null) {
+            return $demande->agent_id === $user->id;
+        }
+
+        return $this->estAgentParDefautActifDuType($demande, $user);
+    }
+
+    private function revendiquerSiNecessaire(Demande $demande, EtatDemande $cible, User $user): ?string
+    {
+        $transition = $this->transitionPour($demande, $cible);
+
+        if ($transition?->role_requis !== 'AGENT' || $demande->agent_id !== null) {
+            return null;
+        }
+
+        if (! $this->estAgentParDefautActifDuType($demande, $user)) {
+            abort(403, 'Action non autorisée.');
+        }
+
+        $demande->forceFill(['agent_id' => $user->id])->save();
+
+        return "Demande prise en charge par {$user->name}.";
+    }
+
+    private function aDesAgentsParDefautActifs(Demande $demande): bool
+    {
+        return $demande->typeDocument()
+            ->whereHas('defaultAgents', fn ($query) => $query->active())
+            ->exists();
+    }
+
+    private function estAgentParDefautActifDuType(Demande $demande, User $user): bool
+    {
+        if (! User::query()->active()->whereKey($user->id)->exists()) {
+            return false;
+        }
+
+        return $demande->typeDocument()
+            ->whereHas('defaultAgents', fn ($query) => $query->active()->whereKey($user->id))
+            ->exists();
     }
 
     private function enregistrerHistorique(Demande $demande, ?User $user, ?string $commentaire): void

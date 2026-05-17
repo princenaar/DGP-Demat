@@ -33,14 +33,14 @@ class AutoDispatchTest extends TestCase
         ]);
     }
 
-    public function test_default_agent_is_assigned_when_demande_is_receptionnee(): void
+    public function test_default_agents_trigger_automatic_validation_when_demande_is_receptionnee(): void
     {
         $accueil = User::factory()->create();
         $accueil->assignRole('ACCUEIL');
         $agent = User::factory()->create();
         $agent->assignRole('AGENT');
         $type = TypeDocument::where('code', 'TRV')->firstOrFail();
-        $type->update(['default_agent_id' => $agent->id]);
+        $type->defaultAgents()->attach($agent);
         $demande = $this->makeDemande(EtatDemande::EN_ATTENTE, ['type_document_id' => $type->id]);
 
         $this->actingAs($accueil)->post(route('demandes.changerEtat', $demande), [
@@ -50,8 +50,8 @@ class AutoDispatchTest extends TestCase
 
         $demande->refresh();
 
-        $this->assertSame(EtatDemande::RECEPTIONNEE, $demande->etatDemande->nom);
-        $this->assertSame($agent->id, $demande->agent_id);
+        $this->assertSame(EtatDemande::VALIDEE, $demande->etatDemande->nom);
+        $this->assertNull($demande->agent_id);
         $this->assertDatabaseHas('historique_etats', [
             'demande_id' => $demande->id,
             'etat_demande_id' => $demande->etat_demande_id,

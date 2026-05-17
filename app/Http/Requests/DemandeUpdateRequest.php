@@ -7,6 +7,7 @@ use App\Models\EtatDemande;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
 
 class DemandeUpdateRequest extends FormRequest
@@ -31,9 +32,13 @@ class DemandeUpdateRequest extends FormRequest
             'nom' => ['required', 'string', 'max:100'],
             'prenom' => ['required', 'string', 'max:100'],
             'nin' => ['required', 'regex:/^[0-9]{13}$/'],
-            'statut' => ['required', 'string', 'in:étatique,contractuel'],
+            'statut' => ['required', 'string', 'in:étatique,contractuel,externe'],
             'matricule' => ['nullable', 'required_if:statut,étatique', 'regex:/^[0-9]{6}[A-Za-z]$/'],
-            'structure_id' => ['required', 'exists:structures,id'],
+            'structure_id' => [
+                'nullable',
+                Rule::requiredIf(fn (): bool => ! $this->isAne()),
+                'exists:structures,id',
+            ],
 
             'telephone' => ['required', 'regex:/^\+221 [0-9]{2} [0-9]{3} [0-9]{2} [0-9]{2}$/'],
 
@@ -54,6 +59,7 @@ class DemandeUpdateRequest extends FormRequest
                 $this->validateTypeDocumentFields($validator);
                 $this->validateTypeDocumentIntegrity($validator);
                 $this->validateEligibility($validator);
+                $this->validateExternalStatus($validator);
                 $this->validateRequiredFiles($validator);
             },
         ];
@@ -138,6 +144,16 @@ class DemandeUpdateRequest extends FormRequest
         }
     }
 
+    private function validateExternalStatus(Validator $validator): void
+    {
+        if ($this->input('statut') === 'externe' && ! $this->isAne()) {
+            $validator->errors()->add(
+                'statut',
+                'Le statut externe est réservé à l’attestation de non engagement.'
+            );
+        }
+    }
+
     private function validateRequiredFiles(Validator $validator): void
     {
         $demande = $this->demande();
@@ -170,5 +186,10 @@ class DemandeUpdateRequest extends FormRequest
 
         return Demande::with(['typeDocument.piecesRequises', 'justificatifs'])
             ->find($demande);
+    }
+
+    private function isAne(): bool
+    {
+        return $this->demande()?->typeDocument?->code === 'ANE';
     }
 }

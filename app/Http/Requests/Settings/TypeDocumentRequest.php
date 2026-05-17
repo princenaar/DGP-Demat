@@ -24,14 +24,18 @@ class TypeDocumentRequest extends FormRequest
     public function rules(): array
     {
         $typeDocument = $this->route('typeDocument');
+        $eligibilities = $typeDocument?->code === 'ANE'
+            ? ['etatique', 'étatique', 'contractuel', 'externe']
+            : ['etatique', 'étatique', 'contractuel'];
 
         return [
             'nom' => ['required', 'string', 'max:255'],
             'code' => ['nullable', 'string', 'max:255', Rule::unique('type_documents', 'code')->ignore($typeDocument?->id)],
             'description' => ['nullable', 'string'],
             'icone' => ['nullable', 'string', 'max:255'],
-            'eligibilite' => ['nullable', Rule::in(['etatique', 'étatique', 'contractuel'])],
-            'default_agent_id' => ['nullable', 'exists:users,id'],
+            'eligibilite' => ['nullable', Rule::in($eligibilities)],
+            'default_agent_ids' => ['nullable', 'array'],
+            'default_agent_ids.*' => ['integer', 'distinct', 'exists:users,id'],
             'champs_requis' => ['nullable', 'array'],
             'champs_requis.*' => ['boolean'],
         ];

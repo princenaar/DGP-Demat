@@ -44,6 +44,7 @@ class PhaseOneSchemaTest extends TestCase
         $this->assertTrue(Schema::hasTable('categories_socioprofessionnelles'));
         $this->assertTrue(Schema::hasTable('pieces_requises'));
         $this->assertTrue(Schema::hasTable('workflow_transitions'));
+        $this->assertTrue(Schema::hasTable('type_document_default_agents'));
 
         $this->assertTrue(Schema::hasColumns('demandes', [
             'categorie_socioprofessionnelle_id',
@@ -132,9 +133,9 @@ class PhaseOneSchemaTest extends TestCase
         ]);
         $this->assertSame(
             'Attestation de non engagement avec le ministère de la santé',
-            TypeDocument::where('code', 'ANA')->value('nom')
+            TypeDocument::where('code', 'ANE')->value('nom')
         );
-        $this->assertSame('etatique', TypeDocument::where('code', 'ANA')->value('eligibilite'));
+        $this->assertSame('externe', TypeDocument::where('code', 'ANE')->value('eligibilite'));
         $this->assertNull(TypeDocument::where('code', 'TRV')->value('eligibilite'));
         $this->assertNotNull(TypeDocument::where('code', 'ADM')->value('description'));
         $this->assertSame(0, PieceRequise::count());
@@ -149,6 +150,50 @@ class PhaseOneSchemaTest extends TestCase
 
         $this->assertSame(320, CategorieSocioprofessionnelle::count());
         $this->assertSame(301, Structure::count());
+    }
+
+    public function test_ana_to_ane_migration_preserves_legacy_number_and_clears_external_fields(): void
+    {
+        $ane = TypeDocument::where('code', 'ANE')->firstOrFail();
+        $ane->update([
+            'code' => 'ANA',
+            'eligibilite' => 'etatique',
+            'champs_requis' => ['date_depart_retraite' => true],
+        ]);
+
+        $demande = Demande::create([
+            'numero_demande' => 'ANA-202600001',
+            'numero_annee' => 2026,
+            'numero_sequence' => 1,
+            'type_document_id' => $ane->id,
+            'structure_id' => Structure::value('id'),
+            'etat_demande_id' => EtatDemande::where('nom', EtatDemande::EN_ATTENTE)->value('id'),
+            'categorie_socioprofessionnelle_id' => CategorieSocioprofessionnelle::value('id'),
+            'nom' => 'Diop',
+            'prenom' => 'Awa',
+            'email' => 'awa.diop@example.test',
+            'telephone' => '771234567',
+            'statut' => 'étatique',
+            'matricule' => '123456A',
+            'nin' => '1234567890123',
+            'date_depart_retraite' => '2024-01-15',
+        ]);
+
+        $migration = require database_path('migrations/2026_05_17_225357_rename_ana_to_ane_and_support_external_status.php');
+        $migration->up();
+
+        $ane->refresh();
+        $demande->refresh();
+
+        $this->assertSame('ANE', $ane->code);
+        $this->assertSame('externe', $ane->eligibilite);
+        $this->assertSame([], $ane->champs_requis);
+        $this->assertSame('ANA-202600001', $demande->numero_demande);
+        $this->assertSame('externe', $demande->statut);
+        $this->assertNull($demande->matricule);
+        $this->assertNull($demande->structure_id);
+        $this->assertNull($demande->categorie_socioprofessionnelle_id);
+        $this->assertNull($demande->date_depart_retraite);
     }
 
     public function test_workflow_transitions_are_seeded_for_each_existing_type(): void
@@ -172,7 +217,7 @@ class PhaseOneSchemaTest extends TestCase
     {
         $agent = User::factory()->create();
         $type = TypeDocument::where('code', 'TRV')->firstOrFail();
-        $type->update(['default_agent_id' => $agent->id]);
+        $type->defaultAgents()->attach($agent);
         $categorie = CategorieSocioprofessionnelle::where('libelle', 'Infirmier breveté')->firstOrFail();
 
         $demande = Demande::create([
@@ -190,7 +235,7 @@ class PhaseOneSchemaTest extends TestCase
 
         $this->assertTrue($demande->categorieSocioprofessionnelle->is($categorie));
         $this->assertTrue($categorie->demandes->first()->is($demande));
-        $this->assertTrue($type->defaultAgent->is($agent));
+        $this->assertTrue($type->defaultAgents->first()->is($agent));
         $this->assertCount(7, $type->workflowTransitions);
     }
 }

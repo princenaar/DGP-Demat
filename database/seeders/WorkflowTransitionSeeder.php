@@ -27,7 +27,7 @@ class WorkflowTransitionSeeder extends Seeder
         ];
 
         TypeDocument::query()
-            ->whereIn('code', ['AFM', 'TRV', 'ADM', 'CTRV', 'ANA'])
+            ->whereIn('code', ['AFM', 'TRV', 'ADM', 'CTRV', 'ANE'])
             ->get()
             ->each(function (TypeDocument $typeDocument) use ($etats, $transitions): void {
                 foreach ($transitions as $index => [$source, $cible, $role]) {

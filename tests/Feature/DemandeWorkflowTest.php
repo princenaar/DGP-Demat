@@ -76,6 +76,15 @@ class DemandeWorkflowTest extends TestCase
             ->assertSee('Faire une demande');
     }
 
+    public function test_public_create_page_only_exposes_external_status_for_ane(): void
+    {
+        $html = $this->get(route('demandes.create'))->getContent();
+
+        $this->assertStringContainsString('x-show="isAne()"', $html);
+        $this->assertStringContainsString('>Externe<', $html);
+        $this->assertStringContainsString('x-bind:disabled="hasFixedEligibility()"', $html);
+    }
+
     public function test_public_user_can_store_demande_with_supporting_file(): void
     {
         Mail::fake();
@@ -390,18 +399,22 @@ class DemandeWorkflowTest extends TestCase
 
     public function test_non_engagement_pdf_uses_short_title(): void
     {
-        $ana = TypeDocument::where('code', 'ANA')->firstOrFail();
+        $ane = TypeDocument::where('code', 'ANE')->firstOrFail();
         $demande = $this->makeDemande(EtatDemande::VALIDEE, [
-            'type_document_id' => $ana->id,
-            'date_depart_retraite' => '2024-01-15',
+            'type_document_id' => $ane->id,
+            'structure_id' => null,
+            'statut' => 'externe',
+            'date_depart_retraite' => null,
         ]);
 
-        $html = view('demandes.pdf.ANA', [
+        $html = view('demandes.pdf.ANE', [
             'demande' => $demande->load('agent', 'typeDocument', 'categorieSocioprofessionnelle'),
             'qrCode' => null,
         ])->render();
 
         $this->assertStringContainsString('ATTESTATION DE NON ENGAGEMENT', $html);
+        $this->assertStringContainsString('n’est lié(e) par aucun engagement', $html);
+        $this->assertStringNotContainsString('pension de retraite', $html);
         $this->assertStringNotContainsString('ATTESTATION DE NON ACTIVITE DANS LA FONCTION PUBLIQUE', $html);
     }
 
@@ -591,7 +604,7 @@ class DemandeWorkflowTest extends TestCase
 
     public function test_store_demande_rejects_statut_that_does_not_match_type_eligibility(): void
     {
-        $type = TypeDocument::where('code', 'ANA')->firstOrFail();
+        $type = TypeDocument::where('code', 'ANE')->firstOrFail();
         $structure = Structure::firstOrFail();
         Http::fake([
             'www.google.com/recaptcha/api/siteverify' => Http::response(['success' => true]),
@@ -606,11 +619,42 @@ class DemandeWorkflowTest extends TestCase
             'structure_id' => $structure->id,
             'email' => 'awa.diop@example.test',
             'telephone' => '+221 77 123 45 67',
-            'date_depart_retraite' => '2024-01-15',
             'g-recaptcha-response' => 'valid-token',
         ]);
 
         $response->assertSessionHasErrors('statut');
+    }
+
+    public function test_store_ane_demande_accepts_external_without_structure_or_matricule(): void
+    {
+        Http::fake([
+            'www.google.com/recaptcha/api/siteverify' => Http::response(['success' => true]),
+        ]);
+
+        $type = TypeDocument::where('code', 'ANE')->firstOrFail();
+
+        $response = $this->post(route('demandes.store'), [
+            'type_document_id' => $type->id,
+            'nom' => 'Diop',
+            'prenom' => 'Awa',
+            'statut' => 'externe',
+            'nin' => '1234567890123',
+            'email' => 'awa.diop@example.test',
+            'telephone' => '+221 77 123 45 67',
+            'g-recaptcha-response' => 'valid-token',
+        ]);
+
+        $response->assertRedirect(route('demandes.create'));
+
+        $this->assertDatabaseHas('demandes', [
+            'type_document_id' => $type->id,
+            'statut' => 'externe',
+            'matricule' => null,
+            'structure_id' => null,
+        ]);
+
+        $demande = Demande::whereBelongsTo($type)->firstOrFail();
+        $this->assertStringStartsWith('ANE-', $demande->numero_demande);
     }
 
     public function test_store_demande_requires_categorie_id_for_types_that_need_it(): void

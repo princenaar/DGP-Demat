@@ -17,7 +17,7 @@
                 <tr>
                     <th class="px-4 py-3 text-left text-xs font-semibold uppercase">Nom</th>
                     <th class="px-4 py-3 text-left text-xs font-semibold uppercase">Code</th>
-                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase">Agent par défaut</th>
+                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase">Agents par défaut</th>
                     <th class="px-4 py-3 text-left text-xs font-semibold uppercase">Actions</th>
                 </tr>
             </thead>
@@ -26,7 +26,7 @@
                     <tr>
                         <td class="px-4 py-3 text-sm font-semibold text-ink-900">{{ $typeDocument->nom }}</td>
                         <td class="px-4 py-3 text-sm text-ink-700">{{ $typeDocument->code }}</td>
-                        <td class="px-4 py-3 text-sm text-ink-700">{{ $typeDocument->defaultAgent?->name ?? '-' }}</td>
+                        <td class="px-4 py-3 text-sm text-ink-700">{{ $typeDocument->defaultAgents->pluck('name')->join(', ') ?: '-' }}</td>
                         <td class="px-4 py-3 text-sm">
                             <div class="flex flex-wrap gap-3">
                                 <a class="font-semibold text-senegal-green" href="{{ route('settings.type-documents.edit', $typeDocument) }}">Modifier</a>

@@ -16,7 +16,15 @@ class DemandeBacklogService
         $query = Demande::query();
 
         if ($user->hasRole('AGENT')) {
-            $query->where('agent_id', $user->id);
+            $query->where(function (Builder $query) use ($user): void {
+                $query->where('agent_id', $user->id)
+                    ->orWhere(function (Builder $query) use ($user): void {
+                        $query->whereNull('agent_id')
+                            ->whereHas('typeDocument.defaultAgents', fn (Builder $query): Builder => $query
+                                ->whereKey($user->id)
+                                ->active());
+                    });
+            });
         } elseif (! $user->hasAnyRole(['ADMIN', 'ACCUEIL', 'CHEF_DE_DIVISION', 'DRH'])) {
             $query->whereRaw('1 = 0');
         }

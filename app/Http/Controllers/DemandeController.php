@@ -66,8 +66,8 @@ class DemandeController extends Controller
                 'nom' => $request->nom,
                 'prenom' => $request->prenom,
                 'nin' => $request->nin,
-                'matricule' => $request->matricule,
-                'structure_id' => $request->structure_id,
+                'matricule' => $request->statut === 'étatique' ? $request->matricule : null,
+                'structure_id' => $request->statut === 'externe' ? null : $request->structure_id,
                 'email' => $request->email,
                 'telephone' => $request->telephone,
                 'statut' => $request->statut,
@@ -148,7 +148,16 @@ class DemandeController extends Controller
     {
         // Vérification du rôle de l'utilisateur
         if (auth()->user()->hasRole('AGENT')) {
-            $query = Demande::where('agent_id', auth()->user()->id)
+            $query = Demande::query()
+                ->where(function ($query): void {
+                    $query->where('agent_id', auth()->id())
+                        ->orWhere(function ($query): void {
+                            $query->whereNull('agent_id')
+                                ->whereHas('typeDocument.defaultAgents', fn ($query) => $query
+                                    ->whereKey(auth()->id())
+                                    ->active());
+                        });
+                })
                 ->with('typeDocument', 'etatDemande', 'structure');
         } elseif (auth()->user()->hasAnyRole(['ADMIN', 'ACCUEIL', 'CHEF_DE_DIVISION', 'DRH'])) {
             $query = Demande::with('typeDocument', 'etatDemande', 'structure');
@@ -161,7 +170,7 @@ class DemandeController extends Controller
         return DataTables::of($query)
             ->addColumn('etat', fn ($demande) => $demande->etatDemande->nom)
             ->addColumn('type', fn ($demande) => $demande->typeDocument->nom)
-            ->addColumn('structure', fn ($demande) => $demande->structure->nom ?? '-')
+            ->addColumn('structure', fn ($demande) => $demande->typeDocument->code === 'ANE' ? '-' : ($demande->structure->nom ?? '-'))
             ->addColumn('actions', function ($demande) {
                 return view('demandes.partials.actions', compact('demande'))->render();
             })
@@ -255,6 +264,16 @@ class DemandeController extends Controller
         }
 
         $demande->fill($request->safe()->except(['fichiers', 'type_document_id']));
+
+        if ($demande->typeDocument?->code === 'ANE') {
+            $demande->forceFill([
+                'matricule' => null,
+                'structure_id' => null,
+                'categorie_socioprofessionnelle_id' => null,
+                'date_depart_retraite' => null,
+            ]);
+        }
+
         $demande->etat_demande_id = EtatDemande::where('nom', EtatDemande::VALIDEE)->value('id');
         $demande->save();
 

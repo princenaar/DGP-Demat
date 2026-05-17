@@ -10,6 +10,7 @@
         'id' => (string) $type->id,
         'nom' => $type->nom,
         'code' => $type->code,
+        'eligibilite' => $type->eligibilite,
         'description' => $type->description,
         'icone' => $type->icone,
         'champs' => $type->champs_requis ?? [],
@@ -88,6 +89,15 @@
                           },
                           syncSelectedType() {
                               this.champs = this.selectedType ? this.selectedType.champs : {};
+                              if (this.selectedType?.eligibilite) {
+                                  this.statut = this.selectedType.eligibilite;
+                              }
+                          },
+                          isAne() {
+                              return this.selectedType?.code === 'ANE';
+                          },
+                          hasFixedEligibility() {
+                              return Boolean(this.selectedType?.eligibilite);
                           },
                           visible(champ) {
                               return Object.prototype.hasOwnProperty.call(this.champs, champ);
@@ -221,14 +231,19 @@
 
                         <fieldset>
                             <legend class="block text-sm font-medium text-gray-700">Statut {!! $requiredMark !!}</legend>
+                            <input x-show="hasFixedEligibility()" type="hidden" name="statut" x-bind:value="statut">
                             <div class="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-2">
-                                <label class="flex cursor-pointer items-center rounded-md border border-gray-200 p-3 hover:border-senegal-green">
-                                    <input type="radio" name="statut" value="étatique" x-model="statut" class="text-senegal-green focus:ring-senegal-green" required>
+                                <label x-show="! isAne()" class="flex cursor-pointer items-center rounded-md border border-gray-200 p-3 hover:border-senegal-green">
+                                    <input type="radio" name="statut" value="étatique" x-model="statut" x-bind:disabled="hasFixedEligibility()" class="text-senegal-green focus:ring-senegal-green" required>
                                     <span class="ml-3 text-sm font-medium text-ink-900">Étatique</span>
                                 </label>
-                                <label class="flex cursor-pointer items-center rounded-md border border-gray-200 p-3 hover:border-senegal-green">
-                                    <input type="radio" name="statut" value="contractuel" x-model="statut" class="text-senegal-green focus:ring-senegal-green" required>
+                                <label x-show="! isAne()" class="flex cursor-pointer items-center rounded-md border border-gray-200 p-3 hover:border-senegal-green">
+                                    <input type="radio" name="statut" value="contractuel" x-model="statut" x-bind:disabled="hasFixedEligibility()" class="text-senegal-green focus:ring-senegal-green" required>
                                     <span class="ml-3 text-sm font-medium text-ink-900">Contractuel</span>
+                                </label>
+                                <label x-show="isAne()" class="flex cursor-not-allowed items-center rounded-md border border-gray-200 bg-gray-50 p-3">
+                                    <input type="radio" value="externe" x-model="statut" disabled class="text-senegal-green focus:ring-senegal-green">
+                                    <span class="ml-3 text-sm font-medium text-ink-900">Externe</span>
                                 </label>
                             </div>
                             <x-input-error :messages="$errors->get('statut')" class="mt-2 rounded bg-red-50 px-3 py-2" />
@@ -246,9 +261,9 @@
                             <x-input-error :messages="$errors->get('nin')" class="mt-2 rounded bg-red-50 px-3 py-2" />
                         </div>
 
-                        <div class="relative" x-on:click.outside="showStructureList = false" x-on:keydown.escape.window="showStructureList = false">
+                        <div x-show="! isAne()" x-cloak class="relative" x-on:click.outside="showStructureList = false" x-on:keydown.escape.window="showStructureList = false">
                             <label for="structure_id" class="block text-sm font-medium text-gray-700">Structure {!! $requiredMark !!}</label>
-                            <select name="structure_id" id="structure_id" x-ref="structureSelect" x-model="selectedStructureId" class="sr-only" required x-on:change="clearFieldState('structure_id')" x-on:blur="validateField('structure_id', $event.target)">
+                            <select name="structure_id" id="structure_id" x-ref="structureSelect" x-model="selectedStructureId" class="sr-only" x-bind:required="! isAne()" x-bind:disabled="isAne()" x-on:change="clearFieldState('structure_id')" x-on:blur="validateField('structure_id', $event.target)">
                                 <option value="">Sélectionner une structure</option>
                                 @foreach($structures as $structure)
                                     <option value="{{ $structure->id }}" @selected((string) $oldStructureId === (string) $structure->id)>{{ $structure->nom }}</option>
@@ -291,7 +306,7 @@
                             </div>
                         </div>
 
-                        <div x-show="visible('categorie_socioprofessionnelle_id')" x-cloak>
+                        <div x-show="! isAne() && visible('categorie_socioprofessionnelle_id')" x-cloak>
                             <label for="categorie_socioprofessionnelle_id" class="block text-sm font-medium text-gray-700">Catégorie socio-professionnelle <span class="text-red-600" aria-hidden="true" x-text="requiredLabel('categorie_socioprofessionnelle_id')"></span></label>
                             <select name="categorie_socioprofessionnelle_id" id="categorie_socioprofessionnelle_id" class="mt-1 block w-full rounded-md border-gray-300 focus:border-senegal-green focus:ring-senegal-green" x-bind:class="fieldClass('categorie_socioprofessionnelle_id')" x-on:input="clearFieldState('categorie_socioprofessionnelle_id')" x-on:blur="validateField('categorie_socioprofessionnelle_id', $event.target)" x-bind:required="required('categorie_socioprofessionnelle_id')">
                                 <option value="">Sélectionner une catégorie</option>
@@ -315,7 +330,7 @@
                                 <x-input-error :messages="$errors->get('date_fin_service')" class="mt-2 rounded bg-red-50 px-3 py-2" />
                             </div>
 
-                            <div x-show="visible('date_depart_retraite')" x-cloak>
+                            <div x-show="! isAne() && visible('date_depart_retraite')" x-cloak>
                                 <label for="date_depart_retraite" class="block text-sm font-medium text-gray-700">Date de départ à la retraite <span class="text-red-600" aria-hidden="true" x-text="requiredLabel('date_depart_retraite')"></span></label>
                                 <x-text-input type="date" name="date_depart_retraite" id="date_depart_retraite" class="mt-1 block w-full" x-bind:class="fieldClass('date_depart_retraite')" :value="old('date_depart_retraite')" x-on:input="clearFieldState('date_depart_retraite')" x-on:blur="validateField('date_depart_retraite', $event.target)" x-bind:required="required('date_depart_retraite')" />
                                 <x-input-error :messages="$errors->get('date_depart_retraite')" class="mt-2 rounded bg-red-50 px-3 py-2" />

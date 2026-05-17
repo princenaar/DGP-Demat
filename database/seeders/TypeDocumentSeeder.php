@@ -53,11 +53,9 @@ class TypeDocumentSeeder extends Seeder
             ],
             [
                 'nom' => 'Attestation de non engagement avec le ministère de la santé',
-                'code' => 'ANA',
-                'champs_requis' => [
-                    'date_depart_retraite' => true,
-                ],
-                'eligibilite' => 'etatique',
+                'code' => 'ANE',
+                'champs_requis' => [],
+                'eligibilite' => 'externe',
                 'description' => 'Attestation prouvant que le demandeur est libre de tout engagement.',
                 'icone' => 'shield-check',
             ],

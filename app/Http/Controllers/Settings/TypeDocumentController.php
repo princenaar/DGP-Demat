@@ -14,7 +14,7 @@ class TypeDocumentController extends Controller
     public function index(): View
     {
         return view('settings.type-documents.index', [
-            'typeDocuments' => TypeDocument::with('defaultAgent', 'piecesRequises', 'workflowTransitions')->orderBy('nom')->get(),
+            'typeDocuments' => TypeDocument::with('defaultAgents', 'piecesRequises', 'workflowTransitions')->orderBy('nom')->get(),
         ]);
     }
 
@@ -30,10 +30,12 @@ class TypeDocumentController extends Controller
     public function store(TypeDocumentRequest $request): RedirectResponse
     {
         $validated = $request->validated();
-        $validated['default_agent_id'] = $this->validatedDefaultAgent($validated['default_agent_id'] ?? null);
+        $defaultAgentIds = $this->validatedDefaultAgents($validated['default_agent_ids'] ?? []);
+        unset($validated['default_agent_ids']);
         $validated['champs_requis'] = $this->normaliseRequiredFields($validated['champs_requis'] ?? []);
 
-        TypeDocument::create($validated);
+        $typeDocument = TypeDocument::create($validated);
+        $typeDocument->defaultAgents()->sync($defaultAgentIds);
 
         return redirect()->route('settings.type-documents.index')->with('status', 'Type de demande créé.');
     }
@@ -45,6 +47,8 @@ class TypeDocumentController extends Controller
 
     public function edit(TypeDocument $typeDocument): View
     {
+        $typeDocument->loadMissing('defaultAgents');
+
         return view('settings.type-documents.form', [
             'typeDocument' => $typeDocument,
             'agents' => User::role('AGENT')->active()->orderBy('name')->get(),
@@ -55,10 +59,18 @@ class TypeDocumentController extends Controller
     public function update(TypeDocumentRequest $request, TypeDocument $typeDocument): RedirectResponse
     {
         $validated = $request->validated();
-        $validated['default_agent_id'] = $this->validatedDefaultAgent($validated['default_agent_id'] ?? null);
+        $defaultAgentIds = $this->validatedDefaultAgents($validated['default_agent_ids'] ?? []);
+        unset($validated['default_agent_ids']);
         $validated['champs_requis'] = $this->normaliseRequiredFields($validated['champs_requis'] ?? []);
 
+        if ($typeDocument->code === 'ANE') {
+            $validated['code'] = 'ANE';
+            $validated['eligibilite'] = 'externe';
+            $validated['champs_requis'] = [];
+        }
+
         $typeDocument->update($validated);
+        $typeDocument->defaultAgents()->sync($defaultAgentIds);
 
         return redirect()->route('settings.type-documents.index')->with('status', 'Type de demande mis à jour.');
     }
@@ -99,13 +111,26 @@ class TypeDocumentController extends Controller
             ->all();
     }
 
-    private function validatedDefaultAgent(mixed $agentId): ?int
+    /**
+     * @param  array<int, mixed>  $agentIds
+     * @return array<int, int>
+     */
+    private function validatedDefaultAgents(array $agentIds): array
     {
-        if (blank($agentId)) {
-            return null;
+        if ($agentIds === []) {
+            return [];
         }
 
-        return User::role('AGENT')->active()->whereKey($agentId)->value('id')
-            ?? abort(422, 'Agent par défaut invalide ou désactivé.');
+        $validAgentIds = User::role('AGENT')
+            ->active()
+            ->whereKey($agentIds)
+            ->pluck('id')
+            ->all();
+
+        if (count($validAgentIds) !== count(array_unique($agentIds))) {
+            abort(422, 'Un ou plusieurs agents par défaut sont invalides ou désactivés.');
+        }
+
+        return $validAgentIds;
     }
 }

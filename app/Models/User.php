@@ -6,7 +6,7 @@ namespace App\Models;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\Notifications\DatabaseNotificationCollection;
@@ -97,9 +97,9 @@ class User extends Authenticatable
         ];
     }
 
-    public function defaultTypeDocuments(): HasMany
+    public function defaultTypeDocuments(): BelongsToMany
     {
-        return $this->hasMany(TypeDocument::class, 'default_agent_id');
+        return $this->belongsToMany(TypeDocument::class, 'type_document_default_agents')->withTimestamps();
     }
 
     public function scopeActive($query)

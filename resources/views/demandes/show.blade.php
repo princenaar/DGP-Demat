@@ -3,6 +3,9 @@
     use Carbon\Carbon;
 
     $etat = $demande->etatDemande->nom ?? 'N/A';
+    $isSharedDefaultAgent = auth()->user()?->is_active
+        && $demande->agent_id === null
+        && $demande->typeDocument?->defaultAgents()->whereKey(auth()->id())->where('is_active', true)->exists();
     $badgeClass = match ($etat) {
         EtatDemande::VALIDEE, EtatDemande::SIGNEE => 'bg-senegal-green text-white',
         EtatDemande::REFUSEE => 'bg-senegal-red text-white',
@@ -71,14 +74,18 @@
                             <dt class="text-sm font-medium text-ink-700">NIN</dt>
                             <dd class="text-ink-900">{{ $demande->nin ?? 'N/A' }}</dd>
                         </div>
+                        @if($demande->typeDocument?->code !== 'ANE')
                         <div>
                             <dt class="text-sm font-medium text-ink-700">Structure</dt>
                             <dd class="text-ink-900">{{ $demande->structure->nom ?? 'N/A' }}</dd>
                         </div>
+                        @endif
+                        @if($demande->typeDocument?->code !== 'ANE')
                         <div>
                             <dt class="text-sm font-medium text-ink-700">Catégorie socioprofessionnelle</dt>
                             <dd class="text-ink-900">{{ $demande->categorieSocioprofessionnelle?->libelle ?? 'N/A' }}</dd>
                         </div>
+                        @endif
                         @if($demande->date_naissance)
                             <div>
                                 <dt class="text-sm font-medium text-ink-700">Date de naissance</dt>
@@ -97,7 +104,7 @@
                                 <dd class="text-ink-900">{{ Carbon::parse($demande->date_fin_service)->format('d/m/Y') }}</dd>
                             </div>
                         @endif
-                        @if($demande->date_depart_retraite)
+                        @if($demande->typeDocument?->code !== 'ANE' && $demande->date_depart_retraite)
                             <div>
                                 <dt class="text-sm font-medium text-ink-700">Date de départ à la retraite</dt>
                                 <dd class="text-ink-900">{{ Carbon::parse($demande->date_depart_retraite)->format('d/m/Y') }}</dd>
@@ -155,10 +162,10 @@
                 <div class="mt-4 space-y-3">
                     @if($etat == EtatDemande::EN_ATTENTE && auth()->user()->hasRole('ACCUEIL'))
                         <x-primary-button type="button" class="w-full justify-center" x-on:click="nouvelEtat = 'RECEPTIONNEE'; agentVisible = false; etatModalOpen = true">Réceptionner la demande</x-primary-button>
-                    @elseif($etat == EtatDemande::RECEPTIONNEE && auth()->user()->hasRole('CHEF_DE_DIVISION'))
+                    @elseif($etat == EtatDemande::RECEPTIONNEE && auth()->user()->hasRole('CHEF_DE_DIVISION') && ! $demande->typeDocument?->defaultAgents()->where('is_active', true)->exists())
                         <x-primary-button type="button" class="w-full justify-center" x-on:click="nouvelEtat = 'VALIDEE'; agentVisible = true; etatModalOpen = true">Valider la demande</x-primary-button>
                         <x-danger-button type="button" class="w-full justify-center" x-on:click="nouvelEtat = 'REFUSEE'; agentVisible = false; etatModalOpen = true">Refuser la demande</x-danger-button>
-                    @elseif($etat === EtatDemande::VALIDEE && auth()->id() === $demande->agent_id)
+                    @elseif($etat === EtatDemande::VALIDEE && (auth()->id() === $demande->agent_id || $isSharedDefaultAgent))
                         <x-primary-button type="button" class="w-full justify-center" x-on:click="nouvelEtat = 'EN SIGNATURE'; agentVisible = false; etatModalOpen = true">Envoyer en signature</x-primary-button>
                         <button type="button" class="inline-flex w-full justify-center rounded-md bg-senegal-yellow px-4 py-2 text-xs font-semibold uppercase tracking-widest text-ink-900 hover:bg-yellow-300" x-on:click="nouvelEtat = 'DEMANDE DE COMPLEMENTS'; agentVisible = false; etatModalOpen = true">Demander des compléments</button>
                     @elseif($etat === EtatDemande::EN_SIGNATURE && auth()->user()->hasRole('DRH'))
