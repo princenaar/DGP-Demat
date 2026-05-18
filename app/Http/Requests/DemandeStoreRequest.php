@@ -22,6 +22,15 @@ class DemandeStoreRequest extends FormRequest
         return true;
     }
 
+    protected function prepareForValidation(): void
+    {
+        $this->merge([
+            'matricule' => Demande::normalizeMatricule($this->input('matricule')),
+            'email' => Demande::normalizeEmail((string) $this->input('email')),
+            'telephone' => Demande::normalizeTelephone((string) $this->input('telephone')),
+        ]);
+    }
+
     /**
      * Get the validation rules that apply to the request.
      *
@@ -170,7 +179,12 @@ class DemandeStoreRequest extends FormRequest
             return;
         }
 
-        if (Demande::hasActiveForIdentity((string) $this->input('nin'), $this->input('matricule'))) {
+        if (Demande::hasActiveForIdentity(
+            (string) $this->input('nin'),
+            $this->input('matricule'),
+            (string) $this->input('email'),
+            (string) $this->input('telephone'),
+        )) {
             $validator->errors()->add('nin', Demande::ACTIVE_DUPLICATE_MESSAGE);
         }
     }

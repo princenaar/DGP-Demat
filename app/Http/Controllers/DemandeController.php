@@ -51,7 +51,12 @@ class DemandeController extends Controller
         try {
             $locks = $this->acquireIdentityLocks($request);
 
-            if (Demande::hasActiveForIdentity((string) $request->nin, $request->matricule)) {
+            if (Demande::hasActiveForIdentity(
+                (string) $request->nin,
+                $request->matricule,
+                (string) $request->email,
+                (string) $request->telephone,
+            )) {
                 return back()
                     ->withInput($request->except(['fichiers', 'g-recaptcha-response']))
                     ->withErrors(['nin' => Demande::ACTIVE_DUPLICATE_MESSAGE]);
@@ -326,6 +331,8 @@ class DemandeController extends Controller
     {
         $keys = [
             'demande-submission:nin:'.sha1((string) $request->nin),
+            'demande-submission:email:'.sha1(Demande::normalizeEmail((string) $request->email)),
+            'demande-submission:telephone:'.sha1(Demande::normalizeTelephone((string) $request->telephone)),
         ];
 
         $matricule = Demande::normalizeMatricule($request->matricule);

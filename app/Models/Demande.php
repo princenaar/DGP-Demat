@@ -147,24 +147,39 @@ class Demande extends Model
             ]));
     }
 
-    public function scopeForIdentity(Builder $query, string $nin, ?string $matricule): Builder
-    {
+    public function scopeForIdentity(
+        Builder $query,
+        string $nin,
+        ?string $matricule,
+        string $email,
+        string $telephone
+    ): Builder {
         $matricule = self::normalizeMatricule($matricule);
+        $email = self::normalizeEmail($email);
+        $telephone = self::normalizeTelephone($telephone);
 
-        return $query->where(function (Builder $query) use ($nin, $matricule): void {
+        return $query->where(function (Builder $query) use ($nin, $matricule, $email, $telephone): void {
             $query->where('nin', $nin);
 
             if ($matricule !== null) {
                 $query->orWhereRaw('UPPER(matricule) = ?', [$matricule]);
             }
+
+            $query
+                ->orWhereRaw('LOWER(email) = ?', [$email])
+                ->orWhere('telephone', $telephone);
         });
     }
 
-    public static function hasActiveForIdentity(string $nin, ?string $matricule): bool
-    {
+    public static function hasActiveForIdentity(
+        string $nin,
+        ?string $matricule,
+        string $email,
+        string $telephone
+    ): bool {
         return self::query()
             ->active()
-            ->forIdentity($nin, $matricule)
+            ->forIdentity($nin, $matricule, $email, $telephone)
             ->exists();
     }
 
@@ -175,5 +190,29 @@ class Demande extends Model
         }
 
         return Str::upper(trim($matricule));
+    }
+
+    public static function normalizeEmail(string $email): string
+    {
+        return Str::lower(trim($email));
+    }
+
+    public static function normalizeTelephone(string $telephone): string
+    {
+        $digits = preg_replace('/\D+/', '', $telephone) ?? '';
+
+        if (strlen($digits) !== 12 || ! str_starts_with($digits, '221')) {
+            return trim($telephone);
+        }
+
+        $digits = substr($digits, 3);
+
+        return sprintf(
+            '+221 %s %s %s %s',
+            substr($digits, 0, 2),
+            substr($digits, 2, 3),
+            substr($digits, 5, 2),
+            substr($digits, 7, 2),
+        );
     }
 }

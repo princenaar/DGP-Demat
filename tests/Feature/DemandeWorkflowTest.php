@@ -184,6 +184,67 @@ class DemandeWorkflowTest extends TestCase
         ]);
     }
 
+    public function test_public_user_cannot_store_new_demande_with_same_email_when_active_demande_exists(): void
+    {
+        Http::fake([
+            'www.google.com/recaptcha/api/siteverify' => Http::response(['success' => true]),
+        ]);
+
+        $activeDemande = $this->makeDemande(EtatDemande::VALIDEE, [
+            'nin' => '1234567890123',
+            'matricule' => '123456A',
+            'email' => 'awa.diop@example.test',
+            'telephone' => '+221 77 123 45 67',
+        ]);
+
+        $response = $this->from(route('demandes.create'))->post(route('demandes.store'), $this->validStorePayload([
+            'nin' => '9999999999999',
+            'matricule' => '654321B',
+            'email' => ' AWA.DIOP@example.test ',
+            'telephone' => '+221 76 987 65 43',
+        ]));
+
+        $response
+            ->assertRedirect(route('demandes.create'))
+            ->assertSessionHasErrors(['nin' => Demande::ACTIVE_DUPLICATE_MESSAGE]);
+
+        $messages = implode(' ', session('errors')->get('nin'));
+
+        $this->assertStringNotContainsString($activeDemande->numero_affiche, $messages);
+        $this->assertDatabaseMissing('demandes', [
+            'nin' => '9999999999999',
+        ]);
+    }
+
+    public function test_public_user_cannot_store_new_demande_with_same_telephone_when_active_demande_exists(): void
+    {
+        Http::fake([
+            'www.google.com/recaptcha/api/siteverify' => Http::response(['success' => true]),
+        ]);
+
+        $this->makeDemande(EtatDemande::VALIDEE, [
+            'nin' => '1234567890123',
+            'matricule' => '123456A',
+            'email' => 'awa.diop@example.test',
+            'telephone' => '+221 77 123 45 67',
+        ]);
+
+        $response = $this->from(route('demandes.create'))->post(route('demandes.store'), $this->validStorePayload([
+            'nin' => '9999999999999',
+            'matricule' => '654321B',
+            'email' => 'fatou.ndiaye@example.test',
+            'telephone' => '+221771234567',
+        ]));
+
+        $response
+            ->assertRedirect(route('demandes.create'))
+            ->assertSessionHasErrors(['nin' => Demande::ACTIVE_DUPLICATE_MESSAGE]);
+
+        $this->assertDatabaseMissing('demandes', [
+            'nin' => '9999999999999',
+        ]);
+    }
+
     public function test_public_user_can_store_new_demande_when_existing_demande_is_signed(): void
     {
         Notification::fake();
