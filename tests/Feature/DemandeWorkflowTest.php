@@ -745,6 +745,40 @@ class DemandeWorkflowTest extends TestCase
             ->assertDontSee('id="commentaire" x-model="commentaire" class="mt-1 block w-full rounded-md border-gray-300 focus:border-senegal-green focus:ring-senegal-green" rows="4" required', false);
     }
 
+    public function test_demande_show_renders_document_viewer_for_pdf_and_image_justificatifs(): void
+    {
+        $admin = User::factory()->create();
+        $admin->assignRole('ADMIN');
+        $demande = $this->makeDemande(EtatDemande::EN_ATTENTE);
+        $pdf = FichierJustificatif::create([
+            'demande_id' => $demande->id,
+            'nom' => 'piece.pdf',
+            'chemin' => 'justificatifs/piece.pdf',
+            'mime_type' => 'application/pdf',
+            'taille' => 1024,
+        ]);
+        $image = FichierJustificatif::create([
+            'demande_id' => $demande->id,
+            'nom' => 'photo.png',
+            'chemin' => 'justificatifs/photo.png',
+            'mime_type' => 'image/png',
+            'taille' => 2048,
+        ]);
+
+        $response = $this->actingAs($admin)->get(route('demandes.show', $demande));
+
+        $response
+            ->assertOk()
+            ->assertSee('Visualiser')
+            ->assertSee('ouvrirJustificatif', false)
+            ->assertSee(str_replace('/', '\/', route('justificatifs.voir', $pdf)), false)
+            ->assertSee(str_replace('/', '\/', route('justificatifs.voir', $image)), false)
+            ->assertSee('Ouvrir dans un nouvel onglet')
+            ->assertSee('[aspect-ratio:210/297]', false)
+            ->assertSee('object-contain', false)
+            ->assertDontSee('class="mt-3 h-96 w-full rounded border border-gray-200"', false);
+    }
+
     public function test_state_change_without_comment_persists_default_comment(): void
     {
         $accueil = User::factory()->create();

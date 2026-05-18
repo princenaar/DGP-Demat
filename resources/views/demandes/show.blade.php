@@ -21,7 +21,23 @@
 @endsection
 
 @section('content')
-    <div class="space-y-6" x-data="{ etatModalOpen: false, fichiersOpen: false, nouvelEtat: '', agentVisible: false, commentaire: '' }">
+    <div class="space-y-6" x-data="{
+        etatModalOpen: false,
+        fichiersOpen: false,
+        justificatifModalOpen: false,
+        justificatifActif: null,
+        nouvelEtat: '',
+        agentVisible: false,
+        commentaire: '',
+        ouvrirJustificatif(fichier) {
+            this.justificatifActif = fichier;
+            this.justificatifModalOpen = true;
+        },
+        fermerJustificatif() {
+            this.justificatifModalOpen = false;
+            this.justificatifActif = null;
+        },
+    }">
         @if(session('success'))
             <div class="rounded bg-senegal-green/10 border-l-4 border-senegal-green p-4 text-senegal-green font-medium">
                 {{ session('success') }}
@@ -139,11 +155,22 @@
                     @if($demande->justificatifs && $demande->justificatifs->count())
                         <div class="mt-4 space-y-4" x-show="fichiersOpen" x-cloak>
                             @foreach($demande->justificatifs as $fichier)
-                                <div class="rounded border border-gray-200 p-4" x-data="{ open: false }">
-                                    <button type="button" class="text-left text-sm font-medium text-senegal-green hover:text-green-800" x-on:click="open = ! open">
-                                        {{ $fichier->nom }} ({{ $fichier->mime_type }}, {{ number_format($fichier->taille / 1024, 2) }} Ko)
+                                <div class="flex flex-col gap-3 rounded border border-gray-200 p-4 sm:flex-row sm:items-center sm:justify-between">
+                                    <div>
+                                        <p class="text-sm font-medium text-ink-900">{{ $fichier->nom }}</p>
+                                        <p class="mt-1 text-sm text-ink-500">{{ $fichier->mime_type }} · {{ number_format($fichier->taille / 1024, 2) }} Ko</p>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        class="inline-flex items-center justify-center rounded-md border border-senegal-green px-4 py-2 text-sm font-semibold text-senegal-green hover:bg-senegal-green hover:text-white"
+                                        x-on:click="ouvrirJustificatif({
+                                            nom: @js($fichier->nom),
+                                            mimeType: @js($fichier->mime_type),
+                                            url: @js(route('justificatifs.voir', $fichier->id)),
+                                        })"
+                                    >
+                                        Visualiser
                                     </button>
-                                    <iframe x-show="open" x-cloak src="{{ route('justificatifs.voir', $fichier->id) }}" class="mt-3 h-96 w-full rounded border border-gray-200"></iframe>
                                 </div>
                             @endforeach
                         </div>
@@ -238,6 +265,59 @@
                         <x-primary-button>Confirmer</x-primary-button>
                     </div>
                 </form>
+            </div>
+        </div>
+
+        <div
+            x-show="justificatifModalOpen"
+            x-cloak
+            class="fixed inset-0 z-50 flex items-center justify-center bg-ink-900/70 p-3 sm:p-6"
+            x-on:keydown.escape.window="fermerJustificatif()"
+        >
+            <div class="flex h-[calc(100vh-1.5rem)] w-full max-w-6xl flex-col overflow-hidden rounded-lg bg-white shadow-2xl sm:h-[calc(100vh-3rem)]" x-on:click.outside="fermerJustificatif()">
+                <div class="flex flex-col gap-3 border-b border-gray-200 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+                    <div class="min-w-0">
+                        <p class="text-sm text-ink-500">Pièce justificative</p>
+                        <h2 class="truncate text-base font-semibold text-ink-900" x-text="justificatifActif?.nom"></h2>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <a
+                            x-bind:href="justificatifActif?.url"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            class="inline-flex items-center rounded-md border border-gray-300 px-3 py-2 text-sm font-semibold text-ink-700 hover:bg-gray-50"
+                        >
+                            Ouvrir dans un nouvel onglet
+                        </a>
+                        <button
+                            type="button"
+                            class="inline-flex h-10 w-10 items-center justify-center rounded-md border border-gray-300 text-ink-700 hover:bg-gray-50"
+                            aria-label="Fermer"
+                            x-on:click="fermerJustificatif()"
+                        >
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="flex min-h-0 flex-1 items-center justify-center overflow-auto bg-slate-100 p-3 sm:p-6">
+                    <div class="flex h-full max-h-full w-full max-w-[min(100%,calc((100vh-9rem)*210/297))] items-center justify-center overflow-hidden rounded border border-gray-200 bg-white shadow-lg [aspect-ratio:210/297]">
+                        <template x-if="justificatifActif?.mimeType === 'application/pdf'">
+                            <iframe
+                                x-bind:src="justificatifActif?.url"
+                                title="Aperçu de la pièce justificative"
+                                class="h-full w-full"
+                            ></iframe>
+                        </template>
+                        <template x-if="justificatifActif && justificatifActif.mimeType !== 'application/pdf'">
+                            <img
+                                x-bind:src="justificatifActif.url"
+                                x-bind:alt="justificatifActif.nom"
+                                class="h-full w-full object-contain"
+                            >
+                        </template>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
