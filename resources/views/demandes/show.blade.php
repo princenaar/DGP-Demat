@@ -22,21 +22,12 @@
 
 @section('content')
     <div class="space-y-6" x-data="{
+        ...createJustificatifViewer(),
         etatModalOpen: false,
         fichiersOpen: false,
-        justificatifModalOpen: false,
-        justificatifActif: null,
         nouvelEtat: '',
         agentVisible: false,
         commentaire: '',
-        ouvrirJustificatif(fichier) {
-            this.justificatifActif = fichier;
-            this.justificatifModalOpen = true;
-        },
-        fermerJustificatif() {
-            this.justificatifModalOpen = false;
-            this.justificatifActif = null;
-        },
     }">
         @if(session('success'))
             <div class="rounded bg-senegal-green/10 border-l-4 border-senegal-green p-4 text-senegal-green font-medium">
@@ -155,6 +146,13 @@
                     @if($demande->justificatifs && $demande->justificatifs->count())
                         <div class="mt-4 space-y-4" x-show="fichiersOpen" x-cloak>
                             @foreach($demande->justificatifs as $fichier)
+                                @php
+                                    $justificatifPayload = [
+                                        'nom' => $fichier->nom,
+                                        'mimeType' => $fichier->mime_type,
+                                        'url' => route('justificatifs.voir', $fichier->id),
+                                    ];
+                                @endphp
                                 <div class="flex flex-col gap-3 rounded border border-gray-200 p-4 sm:flex-row sm:items-center sm:justify-between">
                                     <div>
                                         <p class="text-sm font-medium text-ink-900">{{ $fichier->nom }}</p>
@@ -163,11 +161,7 @@
                                     <button
                                         type="button"
                                         class="inline-flex items-center justify-center rounded-md border border-senegal-green px-4 py-2 text-sm font-semibold text-senegal-green hover:bg-senegal-green hover:text-white"
-                                        x-on:click="ouvrirJustificatif({
-                                            nom: @js($fichier->nom),
-                                            mimeType: @js($fichier->mime_type),
-                                            url: @js(route('justificatifs.voir', $fichier->id)),
-                                        })"
+                                        x-on:click="ouvrirJustificatif(@js($justificatifPayload))"
                                     >
                                         Visualiser
                                     </button>
@@ -271,16 +265,44 @@
         <div
             x-show="justificatifModalOpen"
             x-cloak
-            class="fixed inset-0 z-50 flex items-center justify-center bg-ink-900/70 p-3 sm:p-6"
+            class="fixed inset-0 z-50 overflow-y-auto bg-ink-900/70 p-3 sm:p-6"
             x-on:keydown.escape.window="fermerJustificatif()"
         >
-            <div class="flex h-[calc(100vh-1.5rem)] w-full max-w-6xl flex-col overflow-hidden rounded-lg bg-white shadow-2xl sm:h-[calc(100vh-3rem)]" x-on:click.outside="fermerJustificatif()">
-                <div class="flex flex-col gap-3 border-b border-gray-200 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+            <div class="mx-auto flex min-h-[22rem] w-full max-w-6xl flex-col overflow-hidden rounded-lg bg-white shadow-2xl sm:my-4 sm:max-h-[calc(100vh-5rem)]" x-on:click.outside="fermerJustificatif()">
+                <div class="flex shrink-0 flex-col gap-3 border-b border-gray-200 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
                     <div class="min-w-0">
                         <p class="text-sm text-ink-500">Pièce justificative</p>
                         <h2 class="truncate text-base font-semibold text-ink-900" x-text="justificatifActif?.nom"></h2>
                     </div>
-                    <div class="flex items-center gap-2">
+                    <div class="flex flex-wrap items-center gap-2">
+                        <div class="inline-flex items-center rounded-md border border-gray-300 bg-white">
+                            <button
+                                type="button"
+                                class="inline-flex h-10 w-10 items-center justify-center text-ink-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:text-gray-300"
+                                aria-label="Dézoomer"
+                                x-on:click="zoomerJustificatif(-zoomStep)"
+                                x-bind:disabled="justificatifZoom <= minZoom"
+                            >
+                                <span aria-hidden="true">−</span>
+                            </button>
+                            <span class="min-w-16 border-x border-gray-300 px-3 text-center text-sm font-semibold text-ink-700" x-text="`${Math.round(justificatifZoom * 100)}%`"></span>
+                            <button
+                                type="button"
+                                class="inline-flex h-10 w-10 items-center justify-center text-ink-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:text-gray-300"
+                                aria-label="Zoomer"
+                                x-on:click="zoomerJustificatif(zoomStep)"
+                                x-bind:disabled="justificatifZoom >= maxZoom"
+                            >
+                                <span aria-hidden="true">+</span>
+                            </button>
+                        </div>
+                        <button
+                            type="button"
+                            class="inline-flex h-10 items-center rounded-md border border-gray-300 px-3 text-sm font-semibold text-ink-700 hover:bg-gray-50"
+                            x-on:click="ajusterJustificatif()"
+                        >
+                            Ajuster
+                        </button>
                         <a
                             x-bind:href="justificatifActif?.url"
                             target="_blank"
@@ -300,20 +322,23 @@
                     </div>
                 </div>
 
-                <div class="flex min-h-0 flex-1 items-center justify-center overflow-auto bg-slate-100 p-3 sm:p-6">
-                    <div class="flex h-full max-h-full w-full max-w-[min(100%,calc((100vh-9rem)*210/297))] items-center justify-center overflow-hidden rounded border border-gray-200 bg-white shadow-lg [aspect-ratio:210/297]">
+                <div x-ref="viewerViewport" class="min-h-0 flex-1 overflow-auto bg-slate-100 p-3 sm:p-6">
+                    <div class="mx-auto flex min-h-full w-full flex-col items-center">
+                        <p class="rounded bg-white px-4 py-3 text-sm text-ink-700 shadow" x-show="justificatifLoading">
+                            Chargement du document...
+                        </p>
+                        <p class="rounded bg-red-50 px-4 py-3 text-sm font-medium text-senegal-red" x-show="justificatifError" x-text="justificatifError"></p>
+
                         <template x-if="justificatifActif?.mimeType === 'application/pdf'">
-                            <iframe
-                                x-bind:src="justificatifActif?.url"
-                                title="Aperçu de la pièce justificative"
-                                class="h-full w-full"
-                            ></iframe>
+                            <div x-ref="pdfPages" class="flex w-full flex-col items-center gap-4"></div>
                         </template>
+
                         <template x-if="justificatifActif && justificatifActif.mimeType !== 'application/pdf'">
                             <img
                                 x-bind:src="justificatifActif.url"
                                 x-bind:alt="justificatifActif.nom"
-                                class="h-full w-full object-contain"
+                                class="block max-w-none bg-white shadow-lg"
+                                x-bind:style="`width: ${justificatifZoom * 100}%;`"
                             >
                         </template>
                     </div>

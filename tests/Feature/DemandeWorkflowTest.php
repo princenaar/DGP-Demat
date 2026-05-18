@@ -771,12 +771,19 @@ class DemandeWorkflowTest extends TestCase
             ->assertOk()
             ->assertSee('Visualiser')
             ->assertSee('ouvrirJustificatif', false)
-            ->assertSee(str_replace('/', '\/', route('justificatifs.voir', $pdf)), false)
-            ->assertSee(str_replace('/', '\/', route('justificatifs.voir', $image)), false)
+            ->assertSee('\u0022nom\u0022:\u0022piece.pdf\u0022', false)
+            ->assertSee('\u0022nom\u0022:\u0022photo.png\u0022', false)
             ->assertSee('Ouvrir dans un nouvel onglet')
-            ->assertSee('[aspect-ratio:210/297]', false)
-            ->assertSee('object-contain', false)
-            ->assertDontSee('class="mt-3 h-96 w-full rounded border border-gray-200"', false);
+            ->assertSee('Dézoomer')
+            ->assertSee('Zoomer')
+            ->assertSee('Ajuster')
+            ->assertSee('createJustificatifViewer', false)
+            ->assertSee('x-ref="pdfPages"', false)
+            ->assertSee('x-bind:style="`width: ${justificatifZoom * 100}%;`"', false)
+            ->assertSee('overflow-y-auto bg-ink-900/70', false)
+            ->assertSee('shrink-0 flex-col gap-3 border-b', false)
+            ->assertDontSee('class="mt-3 h-96 w-full rounded border border-gray-200"', false)
+            ->assertDontSee('<iframe', false);
     }
 
     public function test_state_change_without_comment_persists_default_comment(): void
