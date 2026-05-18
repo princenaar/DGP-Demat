@@ -168,13 +168,24 @@ class DemandeController extends Controller
         $etatFilter->applyToQuery($query, $request);
 
         return DataTables::of($query)
-            ->addColumn('etat', fn ($demande) => $demande->etatDemande->nom)
-            ->addColumn('type', fn ($demande) => $demande->typeDocument->nom)
-            ->addColumn('structure', fn ($demande) => $demande->typeDocument->code === 'ANE' ? '-' : ($demande->structure->nom ?? '-'))
+            ->addColumn('statut_label', fn ($demande): string => ucfirst($demande->statut))
+            ->addColumn('etat', function ($demande): string {
+                $etat = $demande->etatDemande?->nom;
+                $label = EtatDemande::labelFor($etat);
+                $classes = EtatDemande::badgeClassFor($etat);
+
+                return '<span class="inline-flex rounded-full px-3 py-1 text-xs font-semibold '.$classes.'">'.$label.'</span>';
+            })
+            ->addColumn('type', function ($demande): string {
+                $code = e($demande->typeDocument?->code ?? '-');
+                $nom = e($demande->typeDocument?->nom ?? 'Type inconnu');
+
+                return '<abbr title="'.$nom.'" class="cursor-help no-underline">'.$code.'</abbr>';
+            })
             ->addColumn('actions', function ($demande) {
                 return view('demandes.partials.actions', compact('demande'))->render();
             })
-            ->rawColumns(['actions'])
+            ->rawColumns(['etat', 'type', 'actions'])
             ->make();
     }
 
@@ -199,7 +210,7 @@ class DemandeController extends Controller
         $transitionExiste = $workflowEngine->transitionsFor($demande)
             ->contains(fn ($transition): bool => $transition->etat_cible_id === $etatFinal->id);
 
-        if (! $transitionExiste) {
+        if (! $transitionExiste && $demande->etat_demande_id !== $etatFinal->id) {
             return back()->withErrors(['Transition invalide.']);
         }
 

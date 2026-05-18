@@ -6,12 +6,7 @@
     $isSharedDefaultAgent = auth()->user()?->is_active
         && $demande->agent_id === null
         && $demande->typeDocument?->defaultAgents()->whereKey(auth()->id())->where('is_active', true)->exists();
-    $badgeClass = match ($etat) {
-        EtatDemande::VALIDEE, EtatDemande::SIGNEE => 'bg-senegal-green text-white',
-        EtatDemande::REFUSEE => 'bg-senegal-red text-white',
-        EtatDemande::EN_ATTENTE, EtatDemande::RECEPTIONNEE => 'bg-senegal-yellow text-ink-900',
-        default => 'bg-gray-200 text-ink-700',
-    };
+    $badgeClass = EtatDemande::badgeClassFor($etat);
 @endphp
 
 @extends('layouts.app')
@@ -28,6 +23,7 @@
         nouvelEtat: '',
         agentVisible: false,
         commentaire: '',
+        etatSubmitting: false,
     }">
         @if(session('success'))
             <div class="rounded bg-senegal-green/10 border-l-4 border-senegal-green p-4 text-senegal-green font-medium">
@@ -221,10 +217,28 @@
         </section>
 
         <div x-show="etatModalOpen" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-ink-900/60 px-4">
-            <div class="w-full max-w-lg rounded-lg bg-white p-6 shadow-xl" x-on:click.outside="etatModalOpen = false">
+            <div class="relative w-full max-w-lg rounded-lg bg-white p-6 shadow-xl" x-on:click.outside="etatModalOpen = false">
                 <h2 class="text-lg font-semibold text-ink-900">Confirmation du changement d’état</h2>
 
-                <form method="POST" action="{{ route('demandes.changerEtat', $demande->id) }}" class="mt-5 space-y-4">
+                <div
+                    x-show="etatSubmitting"
+                    x-cloak
+                    class="absolute inset-0 z-10 flex items-center justify-center rounded-lg bg-white/80"
+                    aria-live="polite"
+                    aria-busy="true"
+                >
+                    <div class="flex items-center gap-3 text-sm font-medium text-ink-700">
+                        <span class="h-5 w-5 animate-spin rounded-full border-2 border-senegal-green border-t-transparent" aria-hidden="true"></span>
+                        <span>Traitement en cours...</span>
+                    </div>
+                </div>
+
+                <form
+                    method="POST"
+                    action="{{ route('demandes.changerEtat', $demande->id) }}"
+                    class="mt-5 space-y-4"
+                    x-on:submit="if (etatSubmitting) { $event.preventDefault(); } else { etatSubmitting = true; }"
+                >
                     @csrf
                     <input type="hidden" name="nouvel_etat" x-bind:value="nouvelEtat">
 
@@ -255,8 +269,8 @@
                     </div>
 
                     <div class="flex justify-end gap-3">
-                        <x-secondary-button x-on:click="etatModalOpen = false">Annuler</x-secondary-button>
-                        <x-primary-button>Confirmer</x-primary-button>
+                        <x-secondary-button x-on:click="etatModalOpen = false" x-bind:disabled="etatSubmitting">Annuler</x-secondary-button>
+                        <x-primary-button x-bind:disabled="etatSubmitting">Confirmer</x-primary-button>
                     </div>
                 </form>
             </div>

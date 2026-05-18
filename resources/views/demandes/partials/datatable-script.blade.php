@@ -13,10 +13,10 @@
                 }
             },
             columns: [
-                {data: 'nom', name: 'nom'},
                 {data: 'prenom', name: 'prenom'},
-                {data: 'structure', name: 'structure.nom', orderable: false, searchable: false},
-                {data: 'type', name: 'typeDocument.nom', orderable: false, searchable: false},
+                {data: 'nom', name: 'nom'},
+                {data: 'statut_label', name: 'statut'},
+                {data: 'type', name: 'typeDocument.code', orderable: false, searchable: false},
                 {data: 'etat', name: 'etatDemande.nom', orderable: false, searchable: false},
                 {data: 'created_at', name: 'created_at'},
                 {data: 'actions', name: 'actions', orderable: false, searchable: false}

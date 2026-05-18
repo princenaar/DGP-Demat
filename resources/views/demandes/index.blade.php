@@ -16,9 +16,9 @@
             <table id="demandes-table" class="min-w-full divide-y divide-gray-200">
                 <thead class="bg-senegal-green text-white">
                 <tr>
-                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Nom</th>
                     <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Prénom</th>
-                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Structure</th>
+                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Nom</th>
+                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Statut</th>
                     <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Type</th>
                     <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">État</th>
                     <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">Date</th>

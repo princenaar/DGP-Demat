@@ -8,6 +8,24 @@ export default {
         './storage/framework/views/*.php',
         './resources/views/**/*.blade.php',
     ],
+    safelist: [
+        'bg-senegal-yellow',
+        'bg-blue-100',
+        'bg-senegal-green',
+        'bg-senegal-red',
+        'bg-amber-100',
+        'bg-indigo-100',
+        'bg-green-700',
+        'bg-gray-300',
+        'bg-gray-200',
+        'text-ink-900',
+        'text-blue-800',
+        'text-white',
+        'text-amber-900',
+        'text-indigo-800',
+        'text-gray-800',
+        'text-ink-700',
+    ],
 
     theme: {
         extend: {

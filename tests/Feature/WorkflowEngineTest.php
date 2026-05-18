@@ -17,6 +17,7 @@ use Database\Seeders\TypeDocumentSeeder;
 use Database\Seeders\WorkflowTransitionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Mail;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 use Tests\TestCase;
 
 class WorkflowEngineTest extends TestCase
@@ -89,6 +90,56 @@ class WorkflowEngineTest extends TestCase
             DemandeComplementMail::class,
             fn (DemandeComplementMail $mail): bool => $mail->commentaireAgent === 'Pièces manquantes'
         );
+    }
+
+    public function test_replaying_same_complement_transition_after_success_is_idempotent(): void
+    {
+        Mail::fake();
+
+        $agent = User::factory()->create();
+        $agent->assignRole('AGENT');
+        $demande = $this->makeDemande(EtatDemande::VALIDEE, ['agent_id' => $agent->id]);
+        $staleDemande = Demande::findOrFail($demande->id);
+        $cible = EtatDemande::where('nom', EtatDemande::COMPLEMENTS)->firstOrFail();
+        $engine = app(WorkflowEngine::class);
+
+        $engine->transitionner($demande, $cible, $agent, [
+            'commentaire' => 'Pièces manquantes',
+        ]);
+
+        $engine->transitionner($staleDemande, $cible, $agent, [
+            'commentaire' => 'Pièces manquantes',
+        ]);
+
+        $demande->refresh();
+
+        $this->assertSame(EtatDemande::COMPLEMENTS, $demande->etatDemande->nom);
+        $this->assertDatabaseCount('historique_etats', 1);
+        Mail::assertSentCount(1);
+    }
+
+    public function test_replaying_same_target_from_another_user_is_not_idempotent(): void
+    {
+        Mail::fake();
+
+        $assignedAgent = User::factory()->create();
+        $assignedAgent->assignRole('AGENT');
+        $otherAgent = User::factory()->create();
+        $otherAgent->assignRole('AGENT');
+        $demande = $this->makeDemande(EtatDemande::VALIDEE, ['agent_id' => $assignedAgent->id]);
+        $cible = EtatDemande::where('nom', EtatDemande::COMPLEMENTS)->firstOrFail();
+        $engine = app(WorkflowEngine::class);
+
+        $engine->transitionner($demande, $cible, $assignedAgent, [
+            'commentaire' => 'Pièces manquantes',
+        ]);
+
+        $this->expectException(HttpException::class);
+        $this->expectExceptionMessage('Action non autorisée.');
+
+        $engine->transitionner($demande, $cible, $otherAgent, [
+            'commentaire' => 'Pièces manquantes',
+        ]);
     }
 
     public function test_automatic_validation_transition_runs_when_enabled_and_rules_pass(): void

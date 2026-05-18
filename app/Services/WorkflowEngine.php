@@ -64,6 +64,10 @@ class WorkflowEngine
         return DB::transaction(function () use ($demande, $cible, $user, $payload): Demande {
             $demande = Demande::query()->whereKey($demande->id)->lockForUpdate()->firstOrFail();
 
+            if ($this->estRejeuDejaAppliquePar($demande, $cible, $user)) {
+                return $demande->refresh();
+            }
+
             if (! $this->peut($demande, $cible, $user)) {
                 abort(403, 'Action non autorisée.');
             }
@@ -287,6 +291,19 @@ class WorkflowEngine
             'user_id' => $user?->id,
             'commentaire' => $commentaire,
         ]);
+    }
+
+    private function estRejeuDejaAppliquePar(Demande $demande, EtatDemande $cible, User $user): bool
+    {
+        if ($demande->etat_demande_id !== $cible->id) {
+            return false;
+        }
+
+        return HistoriqueEtat::query()
+            ->where('demande_id', $demande->id)
+            ->where('etat_demande_id', $cible->id)
+            ->where('user_id', $user->id)
+            ->exists();
     }
 
     private function generatePDF(Demande $demande): string

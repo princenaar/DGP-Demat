@@ -745,6 +745,37 @@ class DemandeWorkflowTest extends TestCase
             ->assertDontSee('id="commentaire" x-model="commentaire" class="mt-1 block w-full rounded-md border-gray-300 focus:border-senegal-green focus:ring-senegal-green" rows="4" required', false);
     }
 
+    public function test_state_change_modal_prevents_double_submission(): void
+    {
+        $accueil = User::factory()->create();
+        $accueil->assignRole('ACCUEIL');
+        $demande = $this->makeDemande(EtatDemande::EN_ATTENTE);
+
+        $response = $this->actingAs($accueil)->get(route('demandes.show', $demande));
+
+        $response
+            ->assertOk()
+            ->assertSee('etatSubmitting: false', false)
+            ->assertSee('x-on:submit="if (etatSubmitting) { $event.preventDefault(); } else { etatSubmitting = true; }"', false)
+            ->assertSee('x-bind:disabled="etatSubmitting"', false);
+    }
+
+    public function test_state_change_modal_shows_blocking_loading_overlay(): void
+    {
+        $accueil = User::factory()->create();
+        $accueil->assignRole('ACCUEIL');
+        $demande = $this->makeDemande(EtatDemande::EN_ATTENTE);
+
+        $response = $this->actingAs($accueil)->get(route('demandes.show', $demande));
+
+        $response
+            ->assertOk()
+            ->assertSee('x-show="etatSubmitting"', false)
+            ->assertSee('aria-busy="true"', false)
+            ->assertSee('animate-spin', false)
+            ->assertSee('Traitement en cours...');
+    }
+
     public function test_demande_show_renders_document_viewer_for_pdf_and_image_justificatifs(): void
     {
         $admin = User::factory()->create();
@@ -872,6 +903,59 @@ class DemandeWorkflowTest extends TestCase
         Mail::assertSent(DemandeComplementMail::class);
     }
 
+    public function test_agent_with_accueil_role_can_request_complements_when_assigned(): void
+    {
+        Mail::fake();
+
+        $agentAccueil = User::factory()->create();
+        $agentAccueil->assignRole('AGENT', 'ACCUEIL');
+        $demande = $this->makeDemande(EtatDemande::VALIDEE, ['agent_id' => $agentAccueil->id]);
+
+        $this->actingAs($agentAccueil)->post(route('demandes.changerEtat', $demande), [
+            'nouvel_etat' => EtatDemande::COMPLEMENTS,
+            'commentaire' => 'Pièces manquantes',
+        ])->assertRedirect(route('demandes.show', $demande));
+
+        $demande->refresh();
+
+        $this->assertSame(EtatDemande::COMPLEMENTS, $demande->etatDemande->nom);
+        $this->assertDatabaseHas('historique_etats', [
+            'demande_id' => $demande->id,
+            'etat_demande_id' => $demande->etat_demande_id,
+            'user_id' => $agentAccueil->id,
+            'commentaire' => 'Pièces manquantes',
+        ]);
+        Mail::assertSent(
+            DemandeComplementMail::class,
+            fn (DemandeComplementMail $mail): bool => str_contains($mail->lien, '/demandes/'.$demande->id.'/edit')
+                && $mail->commentaireAgent === 'Pièces manquantes'
+        );
+    }
+
+    public function test_replaying_same_state_change_redirects_without_repeating_side_effects(): void
+    {
+        Mail::fake();
+
+        $agent = User::factory()->create();
+        $agent->assignRole('AGENT');
+        $demande = $this->makeDemande(EtatDemande::VALIDEE, ['agent_id' => $agent->id]);
+
+        $this->actingAs($agent)->post(route('demandes.changerEtat', $demande), [
+            'nouvel_etat' => EtatDemande::COMPLEMENTS,
+            'commentaire' => 'Pièces manquantes',
+        ])->assertRedirect(route('demandes.show', $demande));
+
+        $this->actingAs($agent)->post(route('demandes.changerEtat', $demande), [
+            'nouvel_etat' => EtatDemande::COMPLEMENTS,
+            'commentaire' => 'Pièces manquantes',
+        ])->assertRedirect(route('demandes.show', $demande))
+            ->assertSessionHas('success', 'État modifié avec succès.');
+
+        $this->assertSame(EtatDemande::COMPLEMENTS, $demande->fresh()->etatDemande->nom);
+        $this->assertDatabaseCount('historique_etats', 1);
+        Mail::assertSentCount(1);
+    }
+
     public function test_signed_edit_link_only_allows_complement_state(): void
     {
         $complement = $this->makeDemande(EtatDemande::COMPLEMENTS);
@@ -994,7 +1078,10 @@ class DemandeWorkflowTest extends TestCase
             ->assertOk()
             ->assertViewHas('etatOptions')
             ->assertSee('Tous les états')
-            ->assertSee('En attente');
+            ->assertSee('En attente')
+            ->assertSeeInOrder(['Prénom', 'Nom', 'Statut', 'Type', 'État', 'Date', 'Actions'])
+            ->assertDontSee('Structure')
+            ->assertDontSee("{data: 'structure'", false);
     }
 
     public function test_data_endpoint_filters_rows_by_etat(): void
@@ -1015,6 +1102,51 @@ class DemandeWorkflowTest extends TestCase
         $this->assertCount(1, $payload);
         $this->assertSame($visible->nom, $payload[0]['nom']);
         $this->assertNotSame($hidden->nom, $payload[0]['nom']);
+    }
+
+    public function test_data_endpoint_renders_business_columns_for_table(): void
+    {
+        $admin = User::factory()->create();
+        $admin->assignRole('ADMIN');
+        $demande = $this->makeDemande(EtatDemande::COMPLEMENTS, [
+            'prenom' => 'Fatou',
+            'nom' => 'Ndiaye',
+            'statut' => 'contractuel',
+        ]);
+
+        $response = $this->actingAs($admin)->getJson(route('demandes.data'));
+
+        $response->assertOk();
+        $payload = $response->json('data.0');
+
+        $this->assertSame($demande->prenom, $payload['prenom']);
+        $this->assertSame($demande->nom, $payload['nom']);
+        $this->assertSame('Contractuel', $payload['statut_label']);
+        $this->assertStringContainsString('<abbr', $payload['type']);
+        $this->assertStringContainsString('title="'.$demande->typeDocument->nom.'"', $payload['type']);
+        $this->assertStringContainsString('>'.$demande->typeDocument->code.'</abbr>', $payload['type']);
+        $this->assertStringContainsString('Demande de compléments', $payload['etat']);
+        $this->assertStringContainsString('bg-amber-100 text-amber-900', $payload['etat']);
+    }
+
+    public function test_etat_presentation_uses_complete_badge_palette(): void
+    {
+        $this->assertSame('En attente', EtatDemande::labelFor(EtatDemande::EN_ATTENTE));
+        $this->assertSame('bg-senegal-yellow text-ink-900', EtatDemande::badgeClassFor(EtatDemande::EN_ATTENTE));
+        $this->assertSame('bg-amber-100 text-amber-900', EtatDemande::badgeClassFor(EtatDemande::COMPLEMENTS));
+        $this->assertSame('bg-indigo-100 text-indigo-800', EtatDemande::badgeClassFor(EtatDemande::EN_SIGNATURE));
+        $this->assertSame('bg-gray-300 text-gray-800', EtatDemande::badgeClassFor(EtatDemande::SUSPENDUE));
+        $this->assertSame('bg-gray-200 text-ink-700', EtatDemande::badgeClassFor('INCONNU'));
+    }
+
+    public function test_tailwind_config_safelists_dynamic_badge_classes(): void
+    {
+        $tailwindConfig = file_get_contents(base_path('tailwind.config.js'));
+
+        $this->assertStringContainsString("'bg-green-700'", $tailwindConfig);
+        $this->assertStringContainsString("'text-white'", $tailwindConfig);
+        $this->assertStringContainsString("'bg-indigo-100'", $tailwindConfig);
+        $this->assertStringContainsString("'text-indigo-800'", $tailwindConfig);
     }
 
     public function test_data_endpoint_combines_etat_filter_with_agent_scope(): void
