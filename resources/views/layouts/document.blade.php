@@ -38,12 +38,12 @@
         .title {
             font-family: Tahoma, serif;
             text-align: center;
-            font-size: 24pt;
+            font-size: 19pt;
             font-weight: bold;
             padding: 10px;
             background-color: #ccc;
             border: 1px solid #aaa;
-            margin-bottom: 30px;
+            margin-bottom: 40px;
             margin-top: 150px;
         }
 
@@ -51,8 +51,20 @@
             font-family: Tahoma, serif;
             font-size: 12pt;
             line-height: 1.6;
-            margin-top: 50px;
+            margin-top: 0;
             text-align: justify;
+        }
+
+        .administrative-paragraph {
+            page-break-inside: avoid;
+        }
+
+        .nowrap {
+            white-space: nowrap;
+        }
+
+        .keep-together {
+            page-break-inside: avoid;
         }
 
         .numero, .date {
@@ -60,6 +72,10 @@
         }
 
         .footer {
+            position: absolute;
+            left: 2cm;
+            right: 2cm;
+            bottom: 1.9cm;
             font-size: 0; /* Supprime l'espace entre inline-block */
         }
 
@@ -72,17 +88,23 @@
             font-size: 12pt; /* Rétablit la taille de police */
         }
 
+        .signature-block {
+            page-break-inside: avoid;
+        }
+
         .qr-box {
             display: inline-block;
-            width: 210px;
+            width: 195px;
             border: 1px solid #333;
-            padding: 10px 12px;
+            padding: 8px 10px;
             text-align: center;
             background: rgba(255, 255, 255, 0.82);
         }
 
         .qr-box img {
             display: block;
+            width: 115px;
+            height: auto;
             margin: 0 auto 6px;
         }
 
@@ -109,7 +131,7 @@
 </head>
 <body>
 <div class="page">
-    <div class="numero">{!! $demande->reference_document !!}</div>
+    <div class="numero nowrap">{!! $demande->reference_document !!}</div>
     <div class="date" style="margin-top: 20px;">Dakar, le {{ Carbon::now()->format('d/m/Y') }}</div>
     <div class="title">@yield('title')</div>
 
@@ -117,7 +139,7 @@
         @yield('content')
         <!-- afficher qrCode si disponible -->
         @if($demande->verification_code && $qrCode)
-            <div class="footer">
+            <div class="footer signature-block keep-together">
                 <!-- QR Code -->
                 <div class="qr-code">
                     <div class="qr-box">

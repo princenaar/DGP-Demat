@@ -5,21 +5,16 @@
 @endsection
 
 @section('content')
-    <p>
-        Je soussigné, Monsieur le Directeur des Ressources humaines, atteste que Mme/M.
-        <strong>{{ $demande->prenom }}</strong> <strong>{{ strtoupper($demande->nom) }}</strong>,
-        {{ $demande->categorieSocioprofessionnelle?->libelle }}, @if($demande->statut === 'contractuel')
-            contractuel(le),
-        @elseif($demande->statut === 'étatique')
-            matricule de solde n° <strong>{{ $demande->matricule }},</strong>
-        @endif
-        est bénéficiaire du fonds de motivation de la santé pour un montant qui s’élève à cent cinquante mille
-        (150 000) francs CFA par trimestre
+    <p class="administrative-paragraph keep-together">
+        Je soussigné, Monsieur le Directeur des Ressources humaines, atteste que @include('demandes.pdf.partials.identity', ['demande' => $demande, 'uppercaseName' => true, 'trailingPunctuation' => ',']) est bénéficiaire du fonds de motivation de la santé pour un montant qui s’élève à cent cinquante mille
+        (<span class="nowrap">150&nbsp;000</span>) <span class="nowrap">francs&nbsp;CFA</span> par
         @if($demande->statut === 'contractuel')
-            pour la période du 1<sup>er</sup> janvier au 31 décembre {{ now()->format('Y') }}
-        @endif.
+            trimestre pour la période du <span class="nowrap">1<sup>er</sup>&nbsp;janvier</span> au <span class="nowrap">31&nbsp;décembre&nbsp;{{ now()->format('Y') }}.</span>
+        @else
+            trimestre.
+        @endif
     </p>
-    <p>
-        En foi de quoi, la présente attestation est établie pour servir et valoir ce que de droit.
+    <p class="administrative-paragraph keep-together">
+        En foi de quoi, la présente attestation est établie pour servir et valoir <span class="nowrap">ce que de droit</span>.
     </p>
 @endsection

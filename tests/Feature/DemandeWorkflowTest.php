@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Mail\DemandeComplementMail;
 use App\Mail\DemandeSigneeMail;
+use App\Models\CategorieSocioprofessionnelle;
 use App\Models\Demande;
 use App\Models\EtatDemande;
 use App\Models\FichierJustificatif;
@@ -525,7 +526,7 @@ class DemandeWorkflowTest extends TestCase
     public function test_motivation_fund_pdf_adds_annual_period_for_contractuels_only(): void
     {
         $afm = TypeDocument::where('code', 'AFM')->firstOrFail();
-        $annualPeriod = 'pour la période du 1<sup>er</sup> janvier au 31 décembre '.now()->format('Y');
+        $annualPeriod = 'pour la période du <span class="nowrap">1<sup>er</sup>&nbsp;janvier</span> au <span class="nowrap">31&nbsp;décembre&nbsp;'.now()->format('Y').'.</span>';
 
         $contractuel = $this->makeDemande(EtatDemande::VALIDEE, [
             'type_document_id' => $afm->id,
@@ -548,6 +549,38 @@ class DemandeWorkflowTest extends TestCase
 
         $this->assertStringContainsString($annualPeriod, $contractuelHtml);
         $this->assertStringNotContainsString($annualPeriod, $etatiqueHtml);
+    }
+
+    public function test_pdf_identity_keeps_sensitive_administrative_groups_together(): void
+    {
+        $category = CategorieSocioprofessionnelle::create([
+            'libelle' => 'Ingénieur principal des services administratifs et financiers',
+            'code' => 'INGENIEUR_PRINCIPAL_SERVICES_ADMINISTRATIFS_FINANCIERS',
+            'ordre' => 999,
+        ]);
+
+        $demande = $this->makeDemande(EtatDemande::VALIDEE, [
+            'prenom' => 'aminata SOKHNA',
+            'nom' => 'diop samb',
+            'statut' => 'étatique',
+            'matricule' => '123456A',
+            'categorie_socioprofessionnelle_id' => $category->id,
+            'date_prise_service' => '2024-01-01',
+        ]);
+
+        $html = view('demandes.pdf.TRV', [
+            'demande' => $demande->load('agent', 'typeDocument', 'categorieSocioprofessionnelle'),
+            'qrCode' => null,
+        ])->render();
+
+        $this->assertStringContainsString('<p class="administrative-paragraph keep-together">', $html);
+        $this->assertStringContainsString('<span class="nowrap"><strong>M./Mme&nbsp;Aminata Sokhna&nbsp;DIOP SAMB</strong></span>', $html);
+        $this->assertStringNotContainsString('aminata SOKHNA&nbsp;diop samb', $html);
+        $this->assertStringContainsString('Ingénieur principal des services administratifs et financiers', $html);
+        $this->assertStringContainsString('<span class="nowrap">matricule de solde n°&nbsp;<strong>123456A</strong>,</span>', $html);
+        $this->assertStringContainsString('<span class="nowrap">1er janvier 2024</span>', $html);
+        $this->assertStringContainsString('<span class="nowrap">ce que de droit</span>', $html);
+        $this->assertDoesNotMatchRegularExpression('/<strong>[^<]*[,.;:!?]\s*<\/strong>/', $html);
     }
 
     public function test_etatique_demande_requires_matricule(): void
