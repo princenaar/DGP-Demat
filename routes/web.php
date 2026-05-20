@@ -63,9 +63,7 @@ Route::middleware(['auth', 'verified', 'role:ADMIN'])->group(function () {
     Route::put('/parametres/types-demandes/{typeDocument}/pieces/{pieceRequise}', [PieceRequiseController::class, 'update'])->name('settings.type-documents.pieces.update');
     Route::delete('/parametres/types-demandes/{typeDocument}/pieces/{pieceRequise}', [PieceRequiseController::class, 'destroy'])->name('settings.type-documents.pieces.destroy');
     Route::get('/parametres/types-demandes/{typeDocument}/workflow', [WorkflowTransitionController::class, 'index'])->name('settings.type-documents.workflow.index');
-    Route::post('/parametres/types-demandes/{typeDocument}/workflow', [WorkflowTransitionController::class, 'store'])->name('settings.type-documents.workflow.store');
     Route::put('/parametres/types-demandes/{typeDocument}/workflow/{workflowTransition}', [WorkflowTransitionController::class, 'update'])->name('settings.type-documents.workflow.update');
-    Route::delete('/parametres/types-demandes/{typeDocument}/workflow/{workflowTransition}', [WorkflowTransitionController::class, 'destroy'])->name('settings.type-documents.workflow.destroy');
     Route::get('/parametres/referentiels', [ReferentielController::class, 'index'])->name('settings.referentiels.index');
     Route::get('/parametres/referentiels/structures/data', [ReferentielController::class, 'structuresData'])->name('settings.structures.data');
     Route::get('/parametres/referentiels/categories/data', [ReferentielController::class, 'categoriesData'])->name('settings.categories.data');

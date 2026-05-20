@@ -103,23 +103,27 @@ class AdminSettingsTest extends TestCase
             'obligatoire' => true,
         ]);
 
-        $source = EtatDemande::where('nom', EtatDemande::EN_ATTENTE)->firstOrFail();
-        $cible = EtatDemande::where('nom', EtatDemande::RECEPTIONNEE)->firstOrFail();
+        $this->assertSame(7, $type->workflowTransitions()->count());
+        $transition = $type->workflowTransitions()
+            ->whereBelongsTo(EtatDemande::where('nom', EtatDemande::EN_ATTENTE)->firstOrFail(), 'etatSource')
+            ->whereBelongsTo(EtatDemande::where('nom', EtatDemande::RECEPTIONNEE)->firstOrFail(), 'etatCible')
+            ->firstOrFail();
 
         $this->get(route('settings.type-documents.workflow.index', $type))
             ->assertOk()
-            ->assertSee('Ajouter une transition')
+            ->assertSee('Transitions du circuit')
+            ->assertDontSee('Ajouter une transition')
             ->assertSee('État source')
             ->assertSee('État cible')
             ->assertSee('Rôle autorisé')
-            ->assertSee('Transition automatique');
+            ->assertSee('EN ATTENTE')
+            ->assertSee('RECEPTIONNEE')
+            ->assertSee('ACCUEIL')
+            ->assertSee('Automatique')
+            ->assertDontSee('Supprimer');
 
-        $this->post(route('settings.type-documents.workflow.store', $type), [
-            'etat_source_id' => $source->id,
-            'etat_cible_id' => $cible->id,
-            'role_requis' => 'ACCUEIL',
+        $this->put(route('settings.type-documents.workflow.update', [$type, $transition]), [
             'automatique' => '1',
-            'ordre' => 1,
         ])->assertRedirect(route('settings.type-documents.workflow.index', $type));
 
         $this->assertDatabaseHas('workflow_transitions', [
@@ -127,6 +131,49 @@ class AdminSettingsTest extends TestCase
             'role_requis' => 'ACCUEIL',
             'automatique' => true,
         ]);
+    }
+
+    public function test_workflow_update_only_changes_automatic_flag(): void
+    {
+        $type = TypeDocument::where('code', 'TRV')->firstOrFail();
+        $transition = $type->workflowTransitions()->firstOrFail();
+        $original = $transition->only(['etat_source_id', 'etat_cible_id', 'role_requis', 'ordre']);
+
+        $this->actingAs($this->admin)->put(route('settings.type-documents.workflow.update', [$type, $transition]), [
+            'etat_source_id' => EtatDemande::where('nom', EtatDemande::SIGNEE)->value('id'),
+            'etat_cible_id' => EtatDemande::where('nom', EtatDemande::EN_ATTENTE)->value('id'),
+            'role_requis' => 'DRH',
+            'ordre' => 99,
+            'automatique' => '1',
+        ])->assertRedirect(route('settings.type-documents.workflow.index', $type));
+
+        $transition->refresh();
+
+        $this->assertSame($original['etat_source_id'], $transition->etat_source_id);
+        $this->assertSame($original['etat_cible_id'], $transition->etat_cible_id);
+        $this->assertSame($original['role_requis'], $transition->role_requis);
+        $this->assertSame($original['ordre'], $transition->ordre);
+        $this->assertTrue($transition->automatique);
+    }
+
+    public function test_workflow_create_and_delete_routes_are_not_registered(): void
+    {
+        $routes = collect(app('router')->getRoutes())->map(fn ($route): ?string => $route->getName());
+
+        $this->assertFalse($routes->contains('settings.type-documents.workflow.store'));
+        $this->assertFalse($routes->contains('settings.type-documents.workflow.destroy'));
+    }
+
+    public function test_workflow_template_seed_does_not_reset_automatic_flags(): void
+    {
+        $transition = TypeDocument::where('code', 'TRV')->firstOrFail()
+            ->workflowTransitions()
+            ->firstOrFail();
+        $transition->forceFill(['automatique' => true])->save();
+
+        $this->seed(WorkflowTransitionSeeder::class);
+
+        $this->assertTrue($transition->fresh()->automatique);
     }
 
     public function test_ane_keeps_reserved_code_and_external_eligibility_when_updated(): void

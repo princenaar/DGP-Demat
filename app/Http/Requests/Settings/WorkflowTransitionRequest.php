@@ -4,7 +4,6 @@ namespace App\Http\Requests\Settings;
 
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 
 class WorkflowTransitionRequest extends FormRequest
 {
@@ -24,11 +23,7 @@ class WorkflowTransitionRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'etat_source_id' => ['required', 'exists:etat_demandes,id'],
-            'etat_cible_id' => ['required', 'exists:etat_demandes,id', 'different:etat_source_id'],
-            'role_requis' => ['required', Rule::in(['ADMIN', 'ACCUEIL', 'CHEF_DE_DIVISION', 'AGENT', 'DRH'])],
             'automatique' => ['nullable', 'boolean'],
-            'ordre' => ['required', 'integer', 'min:0'],
         ];
     }
 }

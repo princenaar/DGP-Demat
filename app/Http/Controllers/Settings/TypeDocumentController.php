@@ -6,11 +6,14 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Settings\TypeDocumentRequest;
 use App\Models\TypeDocument;
 use App\Models\User;
+use App\Services\WorkflowTransitionTemplate;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
 
 class TypeDocumentController extends Controller
 {
+    public function __construct(private WorkflowTransitionTemplate $workflowTemplate) {}
+
     public function index(): View
     {
         return view('settings.type-documents.index', [
@@ -36,6 +39,7 @@ class TypeDocumentController extends Controller
 
         $typeDocument = TypeDocument::create($validated);
         $typeDocument->defaultAgents()->sync($defaultAgentIds);
+        $this->workflowTemplate->createFor($typeDocument);
 
         return redirect()->route('settings.type-documents.index')->with('status', 'Type de demande créé.');
     }
