@@ -8,12 +8,15 @@ use App\Models\HistoriqueEtat;
 use App\Models\Structure;
 use App\Models\TypeDocument;
 use App\Models\User;
+use App\Models\WorkflowTransition;
+use App\Services\WorkflowEngine;
 use Database\Seeders\EtatDemandeSeeder;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Database\Seeders\StructureSeeder;
 use Database\Seeders\TypeDocumentSeeder;
 use Database\Seeders\WorkflowTransitionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use RuntimeException;
 use Tests\TestCase;
 
 class AutoDispatchTest extends TestCase
@@ -57,6 +60,117 @@ class AutoDispatchTest extends TestCase
             'etat_demande_id' => $demande->etat_demande_id,
             'user_id' => $accueil->id,
         ]);
+    }
+
+    public function test_default_agents_force_direct_validation_from_initial_state(): void
+    {
+        $agent = User::factory()->create();
+        $agent->assignRole('AGENT');
+        $type = TypeDocument::where('code', 'TRV')->firstOrFail();
+        $type->defaultAgents()->attach($agent);
+        $demande = $this->makeDemande(EtatDemande::EN_ATTENTE, ['type_document_id' => $type->id]);
+
+        app(WorkflowEngine::class)->declencherAutomatiques($demande);
+
+        $demande->refresh();
+
+        $this->assertSame(EtatDemande::VALIDEE, $demande->etatDemande->nom);
+        $this->assertNull($demande->agent_id);
+        $this->assertDatabaseHas('historique_etats', [
+            'demande_id' => $demande->id,
+            'etat_demande_id' => $demande->etat_demande_id,
+            'user_id' => null,
+            'commentaire' => 'Validation automatique : agent(s) par défaut configuré(s).',
+        ]);
+    }
+
+    public function test_default_agents_force_direct_validation_even_when_required_fields_are_missing(): void
+    {
+        $agent = User::factory()->create();
+        $agent->assignRole('AGENT');
+        $type = TypeDocument::where('code', 'ADM')->firstOrFail();
+        $type->defaultAgents()->attach($agent);
+        $demande = $this->makeDemande(EtatDemande::EN_ATTENTE, [
+            'type_document_id' => $type->id,
+            'date_prise_service' => null,
+        ]);
+
+        app(WorkflowEngine::class)->declencherAutomatiques($demande);
+
+        $demande->refresh();
+
+        $this->assertSame(EtatDemande::VALIDEE, $demande->etatDemande->nom);
+        $this->assertNull($demande->agent_id);
+    }
+
+    public function test_default_agents_do_not_regress_terminal_or_post_agent_states(): void
+    {
+        $agent = User::factory()->create();
+        $agent->assignRole('AGENT');
+        $type = TypeDocument::where('code', 'TRV')->firstOrFail();
+        $type->defaultAgents()->attach($agent);
+        $demande = $this->makeDemande(EtatDemande::SIGNEE, ['type_document_id' => $type->id]);
+
+        app(WorkflowEngine::class)->declencherAutomatiques($demande);
+
+        $this->assertSame(EtatDemande::SIGNEE, $demande->fresh()->etatDemande->nom);
+    }
+
+    public function test_default_agent_queue_stays_validated_even_if_later_transition_is_automatic(): void
+    {
+        $agent = User::factory()->create();
+        $agent->assignRole('AGENT');
+        $type = TypeDocument::where('code', 'TRV')->firstOrFail();
+        $type->defaultAgents()->attach($agent);
+        $this->makeTransitionAutomatic($type, EtatDemande::VALIDEE, EtatDemande::EN_SIGNATURE);
+        $demande = $this->makeDemande(EtatDemande::VALIDEE, ['type_document_id' => $type->id]);
+
+        app(WorkflowEngine::class)->declencherAutomatiques($demande);
+
+        $this->assertSame(EtatDemande::VALIDEE, $demande->fresh()->etatDemande->nom);
+    }
+
+    public function test_automatic_transitions_are_applied_generically_without_default_agents(): void
+    {
+        $type = TypeDocument::where('code', 'TRV')->firstOrFail();
+        $this->makeTransitionAutomatic($type, EtatDemande::EN_ATTENTE, EtatDemande::RECEPTIONNEE);
+        $demande = $this->makeDemande(EtatDemande::EN_ATTENTE, ['type_document_id' => $type->id]);
+
+        app(WorkflowEngine::class)->declencherAutomatiques($demande);
+
+        $this->assertSame(EtatDemande::RECEPTIONNEE, $demande->fresh()->etatDemande->nom);
+    }
+
+    public function test_automatic_transitions_chain_until_no_transition_is_available(): void
+    {
+        $type = TypeDocument::where('code', 'TRV')->firstOrFail();
+        $this->makeTransitionAutomatic($type, EtatDemande::EN_ATTENTE, EtatDemande::RECEPTIONNEE);
+        $this->makeTransitionAutomatic($type, EtatDemande::RECEPTIONNEE, EtatDemande::REFUSEE);
+        $demande = $this->makeDemande(EtatDemande::EN_ATTENTE, ['type_document_id' => $type->id]);
+
+        app(WorkflowEngine::class)->declencherAutomatiques($demande);
+
+        $this->assertSame(EtatDemande::REFUSEE, $demande->fresh()->etatDemande->nom);
+    }
+
+    public function test_automatic_transition_cycles_are_rejected(): void
+    {
+        $type = TypeDocument::where('code', 'TRV')->firstOrFail();
+        $this->makeTransitionAutomatic($type, EtatDemande::EN_ATTENTE, EtatDemande::RECEPTIONNEE);
+        WorkflowTransition::create([
+            'type_document_id' => $type->id,
+            'etat_source_id' => EtatDemande::where('nom', EtatDemande::RECEPTIONNEE)->value('id'),
+            'etat_cible_id' => EtatDemande::where('nom', EtatDemande::EN_ATTENTE)->value('id'),
+            'role_requis' => 'ADMIN',
+            'automatique' => true,
+            'ordre' => 0,
+        ]);
+        $demande = $this->makeDemande(EtatDemande::EN_ATTENTE, ['type_document_id' => $type->id]);
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Boucle détectée dans les transitions automatiques du workflow.');
+
+        app(WorkflowEngine::class)->declencherAutomatiques($demande);
     }
 
     public function test_chef_can_manually_imputer_a_demande(): void
@@ -110,5 +224,13 @@ class AutoDispatchTest extends TestCase
             'nin' => '1234567890123',
             'date_prise_service' => '2024-01-15',
         ], $attributes));
+    }
+
+    private function makeTransitionAutomatic(TypeDocument $typeDocument, string $source, string $cible): void
+    {
+        WorkflowTransition::where('type_document_id', $typeDocument->id)
+            ->where('etat_source_id', EtatDemande::where('nom', $source)->value('id'))
+            ->where('etat_cible_id', EtatDemande::where('nom', $cible)->value('id'))
+            ->update(['automatique' => true]);
     }
 }

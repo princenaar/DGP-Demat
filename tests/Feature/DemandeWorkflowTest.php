@@ -130,6 +130,49 @@ class DemandeWorkflowTest extends TestCase
         Storage::disk('local')->assertExists($fichier->chemin);
     }
 
+    public function test_public_store_for_type_with_default_agent_arrives_directly_validated(): void
+    {
+        Mail::fake();
+        Storage::fake('local');
+        Http::fake([
+            'www.google.com/recaptcha/api/siteverify' => Http::response(['success' => true]),
+        ]);
+
+        $agent = User::factory()->create();
+        $agent->assignRole('AGENT');
+        $type = TypeDocument::where('code', 'TRV')->firstOrFail();
+        $type->defaultAgents()->attach($agent);
+        $structure = Structure::firstOrFail();
+
+        $response = $this->post(route('demandes.store'), [
+            'type_document_id' => $type->id,
+            'nom' => 'Ndiaye',
+            'prenom' => 'Moussa',
+            'statut' => 'contractuel',
+            'nin' => '1234567890124',
+            'structure_id' => $structure->id,
+            'email' => 'moussa.ndiaye@example.test',
+            'telephone' => '+221 77 123 45 68',
+            'date_prise_service' => '2024-01-15',
+            'g-recaptcha-response' => 'valid-token',
+        ]);
+
+        $response
+            ->assertRedirect(route('demandes.create'))
+            ->assertSessionHas('success');
+
+        $demande = Demande::where('nin', '1234567890124')->firstOrFail();
+
+        $this->assertSame(EtatDemande::VALIDEE, $demande->etatDemande->nom);
+        $this->assertNull($demande->agent_id);
+        $this->assertDatabaseHas('historique_etats', [
+            'demande_id' => $demande->id,
+            'etat_demande_id' => $demande->etat_demande_id,
+            'user_id' => null,
+            'commentaire' => 'Validation automatique : agent(s) par défaut configuré(s).',
+        ]);
+    }
+
     public function test_public_user_cannot_store_new_demande_with_same_nin_when_active_demande_exists(): void
     {
         Http::fake([

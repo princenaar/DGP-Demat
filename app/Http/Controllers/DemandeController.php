@@ -43,7 +43,7 @@ class DemandeController extends Controller
     /**
      * @throws Throwable
      */
-    public function store(DemandeStoreRequest $request)
+    public function store(DemandeStoreRequest $request, WorkflowEngine $workflowEngine)
     {
         $locks = [];
         $transactionStarted = false;
@@ -87,6 +87,8 @@ class DemandeController extends Controller
 
             // Enregistrement des justificatifs
             $this->saveFile($request, $demande);
+
+            $demande = $workflowEngine->declencherAutomatiques($demande);
 
             DB::commit();
 

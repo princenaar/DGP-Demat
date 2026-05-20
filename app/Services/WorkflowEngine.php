@@ -16,6 +16,7 @@ use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
+use RuntimeException;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
 
 class WorkflowEngine
@@ -85,6 +86,17 @@ class WorkflowEngine
         });
     }
 
+    public function declencherAutomatiques(Demande $demande, ?User $user = null): Demande
+    {
+        return DB::transaction(function () use ($demande, $user): Demande {
+            $demande = Demande::query()->whereKey($demande->id)->lockForUpdate()->firstOrFail();
+
+            $this->declencherTransitionsAutomatiques($demande, $user, validationDirecteParAgent: true);
+
+            return $demande->refresh();
+        });
+    }
+
     public function imputer(Demande $demande, User $agent, User $user, ?string $commentaire = null): Demande
     {
         return DB::transaction(function () use ($demande, $agent, $user, $commentaire): Demande {
@@ -102,7 +114,7 @@ class WorkflowEngine
     /**
      * @param  array{commentaire?: string, agent_id?: int|null}  $payload
      */
-    private function appliquerTransition(Demande $demande, EtatDemande $cible, User $user, array $payload): void
+    private function appliquerTransition(Demande $demande, EtatDemande $cible, ?User $user, array $payload): void
     {
         $commentaire = $payload['commentaire'] ?? null;
         $commentaireAutomatique = null;
@@ -196,19 +208,40 @@ class WorkflowEngine
             ->first(fn (WorkflowTransition $transition): bool => $transition->etat_cible_id === $cible->id);
     }
 
-    private function declencherTransitionsAutomatiques(Demande $demande, User $user): void
-    {
-        if ($demande->etatDemande?->nom === EtatDemande::RECEPTIONNEE && $this->aDesAgentsParDefautActifs($demande)) {
-            $transitionValidation = $this->transitionsFor($demande)
-                ->first(fn (WorkflowTransition $transition): bool => $transition->etatCible?->nom === EtatDemande::VALIDEE);
+    /**
+     * @param  list<int>  $etatsVisites
+     */
+    private function declencherTransitionsAutomatiques(
+        Demande $demande,
+        ?User $user,
+        bool $validationDirecteParAgent = false,
+        array $etatsVisites = []
+    ): void {
+        $demande->loadMissing('etatDemande');
+        $etatCourantId = (int) $demande->etat_demande_id;
 
-            if ($transitionValidation) {
-                $this->appliquerTransition($demande, $transitionValidation->etatCible, $user, [
-                    'commentaire' => 'Validation automatique : file partagée configurée.',
-                ]);
+        if (in_array($etatCourantId, $etatsVisites, true)) {
+            throw new RuntimeException('Boucle détectée dans les transitions automatiques du workflow.');
+        }
+
+        $etatsVisites[] = $etatCourantId;
+
+        if ($this->aDesAgentsParDefautActifs($demande)) {
+            if ($validationDirecteParAgent && $this->estEtatAvantTraitementAgent($demande)) {
+                $this->appliquerValidationAutomatiqueParAgents($demande, $user);
+
+                return;
             }
 
-            return;
+            if ($demande->etatDemande?->nom === EtatDemande::VALIDEE) {
+                return;
+            }
+
+            if ($demande->etatDemande?->nom === EtatDemande::RECEPTIONNEE) {
+                $this->appliquerValidationAutomatiqueParAgents($demande, $user);
+
+                return;
+            }
         }
 
         $transition = $this->transitionsFor($demande)
@@ -218,24 +251,57 @@ class WorkflowEngine
             return;
         }
 
+        if (in_array((int) $transition->etat_cible_id, $etatsVisites, true)) {
+            throw new RuntimeException('Boucle détectée dans les transitions automatiques du workflow.');
+        }
+
         $this->appliquerTransition($demande, $transition->etatCible, $user, [
-            'commentaire' => 'Transition automatique.',
+            'commentaire' => 'Transition automatique : '.$transition->etatSource?->nom.' -> '.$transition->etatCible?->nom.'.',
         ]);
 
-        $this->declencherTransitionsAutomatiques($demande->refresh(), $user);
+        $this->declencherTransitionsAutomatiques($demande->refresh(), $user, $validationDirecteParAgent, $etatsVisites);
+    }
+
+    private function appliquerValidationAutomatiqueParAgents(Demande $demande, ?User $user): void
+    {
+        $etatValidee = EtatDemande::where('nom', EtatDemande::VALIDEE)->firstOrFail();
+
+        if ($demande->etat_demande_id === $etatValidee->id) {
+            return;
+        }
+
+        $this->appliquerTransition($demande, $etatValidee, $user, [
+            'commentaire' => 'Validation automatique : agent(s) par défaut configuré(s).',
+            'agent_id' => null,
+        ]);
+    }
+
+    private function estEtatAvantTraitementAgent(Demande $demande): bool
+    {
+        return ! in_array($demande->etatDemande?->nom, [
+            EtatDemande::VALIDEE,
+            EtatDemande::REFUSEE,
+            EtatDemande::COMPLEMENTS,
+            EtatDemande::EN_SIGNATURE,
+            EtatDemande::SIGNEE,
+            EtatDemande::SUSPENDUE,
+        ], true);
     }
 
     private function gardeAutomatiquePasse(Demande $demande, WorkflowTransition $transition): bool
     {
-        return $transition->etatSource?->nom === EtatDemande::RECEPTIONNEE
-            && $transition->etatCible?->nom === EtatDemande::VALIDEE
-            && $this->validationRules->estEligibleAValidationAuto($demande);
+        if ($transition->etatCible?->nom !== EtatDemande::VALIDEE) {
+            return true;
+        }
+
+        return $this->validationRules->estEligibleAValidationAuto($demande);
     }
 
-    private function ajouterCommentaireAudit(Demande $demande, User $user, string $commentaire): void
+    private function ajouterCommentaireAudit(Demande $demande, ?User $user, string $commentaire): void
     {
         $ancienCommentaire = $demande->commentaire ?? '';
-        $nouveauCommentaire = now()->format('d/m/Y H:i').' - '.$user->name.' : '.$commentaire;
+        $auteur = $user?->name ?? 'Système';
+        $nouveauCommentaire = now()->format('d/m/Y H:i').' - '.$auteur.' : '.$commentaire;
         $demande->commentaire = trim($ancienCommentaire."\n".$nouveauCommentaire);
     }
 
