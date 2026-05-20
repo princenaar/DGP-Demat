@@ -12,7 +12,7 @@
                 <p class="mt-2 text-3xl font-bold text-ink-900">{{ $demandesATraiterCount }}</p>
             </div>
             <div class="rounded-lg border border-gray-100 bg-white p-5 shadow">
-                <p class="text-sm font-medium text-ink-500">États suivis</p>
+                <p class="text-sm font-medium text-ink-500">Total demandes suivis</p>
                 <p class="mt-2 text-3xl font-bold text-ink-900">{{ collect($countsByEtat)->sum('total') }}</p>
             </div>
             <div class="rounded-lg border border-gray-100 bg-white p-5 shadow">
@@ -88,5 +88,6 @@
         'tableId' => 'dashboard-actions-table',
         'filterId' => 'dashboard-etat-filter',
         'ajaxUrl' => route('dashboard.data'),
+        'columns' => 'dashboard',
     ])
 @endpush

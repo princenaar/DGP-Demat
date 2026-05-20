@@ -59,10 +59,15 @@ class DashboardTest extends TestCase
             ->assertViewHas('countsByTypeLast30Days')
             ->assertViewHas('averageSignatureTime')
             ->assertViewHas('etatOptions')
+            ->assertSee('Total demandes suivis')
+            ->assertDontSee('États suivis')
             ->assertSee('Demandes par état')
             ->assertSee('Mes demandes à traiter')
             ->assertSee('Tous les états')
-            ->assertSee('Réceptionnée');
+            ->assertSee('Réceptionnée')
+            ->assertSeeInOrder(['Nom', 'Prénom', 'Structure', 'Type', 'État', 'Date', 'Actions'])
+            ->assertSee("{data: 'structure'", false)
+            ->assertDontSee("{data: 'statut_label'", false);
     }
 
     public function test_home_path_displays_dashboard_for_authenticated_users(): void
@@ -109,6 +114,9 @@ class DashboardTest extends TestCase
 
         $this->assertCount(1, $payload);
         $this->assertSame($visible->nom, $payload[0]['nom']);
+        $this->assertSame($visible->prenom, $payload[0]['prenom']);
+        $this->assertSame(e($visible->structure->nom), $payload[0]['structure']);
+        $this->assertArrayNotHasKey('statut_label', $payload[0]);
     }
 
     public function test_dashboard_data_filters_actionable_rows_by_etat(): void
