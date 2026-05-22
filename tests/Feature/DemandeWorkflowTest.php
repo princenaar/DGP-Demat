@@ -595,7 +595,7 @@ class DemandeWorkflowTest extends TestCase
         $this->assertStringContainsString('<span class="nowrap"><strong>M./Mme&nbsp;Aminata Sokhna&nbsp;DIOP SAMB</strong></span>', $html);
         $this->assertStringNotContainsString('aminata SOKHNA&nbsp;diop samb', $html);
         $this->assertStringContainsString('Ingénieur principal des services administratifs et financiers', $html);
-        $this->assertStringContainsString('matricule de solde <span class="no-break-token">n°&nbsp;<strong>123456A</strong></span>,', $html);
+        $this->assertStringContainsString('matricule de solde <strong>n°&nbsp;123456A</strong>,', $html);
         $this->assertStringContainsString('<span class="nowrap">1er janvier 2024</span>', $html);
         $this->assertStringContainsString('<span class="nowrap">ce que de droit</span>', $html);
         $this->assertDoesNotMatchRegularExpression('/<strong>[^<]*[,.;:!?]\s*<\/strong>/', $html);
