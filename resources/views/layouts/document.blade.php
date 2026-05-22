@@ -68,6 +68,11 @@
             white-space: nowrap;
         }
 
+        .no-break-token {
+            display: inline-block;
+            white-space: nowrap;
+        }
+
         .keep-together {
             page-break-inside: avoid;
         }

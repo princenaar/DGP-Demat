@@ -23,7 +23,7 @@
     if ($demande->statut === 'contractuel') {
         $segments[] = '<span class="nowrap">contractuel(le)'.e($trailingPunctuation).'</span>';
     } elseif ($demande->statut === 'étatique') {
-        $segments[] = '<span class="nowrap">matricule de solde n°&nbsp;<strong>'.e($demande->matricule).'</strong>'.e($trailingPunctuation).'</span>';
+        $segments[] = 'matricule de solde <span class="no-break-token">n°&nbsp;<strong>'.e($demande->matricule).'</strong></span>'.e($trailingPunctuation);
     } else {
         $segments[count($segments) - 1] .= e($trailingPunctuation);
     }

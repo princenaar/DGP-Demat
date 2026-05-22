@@ -140,6 +140,11 @@ class PhaseOneSchemaTest extends TestCase
         $this->assertSame('externe', TypeDocument::where('code', 'ANE')->value('eligibilite'));
         $this->assertNull(TypeDocument::where('code', 'TRV')->value('eligibilite'));
         $this->assertNotNull(TypeDocument::where('code', 'ADM')->value('description'));
+        $admRequiredFields = TypeDocument::where('code', 'ADM')->firstOrFail()->champs_requis;
+        $this->assertSame([
+            'categorie_socioprofessionnelle_id' => true,
+            'date_prise_service' => true,
+        ], $admRequiredFields);
         $this->assertSame(0, PieceRequise::count());
     }
 

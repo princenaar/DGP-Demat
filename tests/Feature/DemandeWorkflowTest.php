@@ -595,7 +595,7 @@ class DemandeWorkflowTest extends TestCase
         $this->assertStringContainsString('<span class="nowrap"><strong>M./Mme&nbsp;Aminata Sokhna&nbsp;DIOP SAMB</strong></span>', $html);
         $this->assertStringNotContainsString('aminata SOKHNA&nbsp;diop samb', $html);
         $this->assertStringContainsString('Ingénieur principal des services administratifs et financiers', $html);
-        $this->assertStringContainsString('<span class="nowrap">matricule de solde n°&nbsp;<strong>123456A</strong>,</span>', $html);
+        $this->assertStringContainsString('matricule de solde <span class="no-break-token">n°&nbsp;<strong>123456A</strong></span>,', $html);
         $this->assertStringContainsString('<span class="nowrap">1er janvier 2024</span>', $html);
         $this->assertStringContainsString('<span class="nowrap">ce que de droit</span>', $html);
         $this->assertDoesNotMatchRegularExpression('/<strong>[^<]*[,.;:!?]\s*<\/strong>/', $html);
@@ -895,6 +895,31 @@ class DemandeWorkflowTest extends TestCase
         $response->assertSessionHasErrors('categorie_socioprofessionnelle_id');
     }
 
+    public function test_store_administratif_demande_requires_category(): void
+    {
+        Http::fake([
+            'www.google.com/recaptcha/api/siteverify' => Http::response(['success' => true]),
+        ]);
+
+        $type = TypeDocument::where('code', 'ADM')->firstOrFail();
+        $structure = Structure::firstOrFail();
+
+        $response = $this->post(route('demandes.store'), [
+            'type_document_id' => $type->id,
+            'nom' => 'Diop',
+            'prenom' => 'Awa',
+            'statut' => 'contractuel',
+            'nin' => '1234567890123',
+            'structure_id' => $structure->id,
+            'email' => 'awa.diop@example.test',
+            'telephone' => '+221 77 123 45 67',
+            'date_prise_service' => '2024-01-15',
+            'g-recaptcha-response' => 'valid-token',
+        ]);
+
+        $response->assertSessionHasErrors('categorie_socioprofessionnelle_id');
+    }
+
     public function test_store_demande_requires_categorie_id_for_types_that_need_it(): void
     {
         $type = TypeDocument::where('code', 'AFM')->firstOrFail();
@@ -1048,6 +1073,31 @@ class DemandeWorkflowTest extends TestCase
         $demande = $this->makeDemande(EtatDemande::VALIDEE, [
             'type_document_id' => $trv->id,
             'categorie_socioprofessionnelle_id' => null,
+            'date_fin_service' => null,
+            'date_depart_retraite' => null,
+        ]);
+
+        $response = $this->actingAs($admin)->get(route('demandes.show', $demande));
+
+        $response
+            ->assertOk()
+            ->assertSeeText('Catégorie socioprofessionnelle')
+            ->assertSeeText('Date de prise de service')
+            ->assertDontSeeText('Date de fin de service')
+            ->assertDontSeeText('Date de départ à la retraite');
+
+        $this->assertStringContainsString('<dd class="text-ink-900">N/A</dd>', $response->getContent());
+    }
+
+    public function test_demande_show_displays_missing_required_administratif_category(): void
+    {
+        $admin = User::factory()->create();
+        $admin->assignRole('ADMIN');
+        $adm = TypeDocument::where('code', 'ADM')->firstOrFail();
+        $demande = $this->makeDemande(EtatDemande::VALIDEE, [
+            'type_document_id' => $adm->id,
+            'categorie_socioprofessionnelle_id' => null,
+            'date_prise_service' => '2024-01-15',
             'date_fin_service' => null,
             'date_depart_retraite' => null,
         ]);

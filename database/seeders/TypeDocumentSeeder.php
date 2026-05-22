@@ -35,6 +35,7 @@ class TypeDocumentSeeder extends Seeder
                 'nom' => 'Certificat administratif',
                 'code' => 'ADM',
                 'champs_requis' => [
+                    'categorie_socioprofessionnelle_id' => true,
                     'date_prise_service' => true,
                 ],
                 'eligibilite' => null,
