@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\DemandeStoreRequest;
 use App\Http\Requests\DemandeUpdateRequest;
+use App\Models\ApplicationSetting;
 use App\Models\CategorieSocioprofessionnelle;
 use App\Models\Demande;
 use App\Models\EtatDemande;
@@ -257,6 +258,15 @@ class DemandeController extends Controller
         ]);
     }
 
+    public function renvoyerComplements(Request $request, Demande $demande, WorkflowEngine $workflowEngine): RedirectResponse
+    {
+        $workflowEngine->renvoyerDemandeComplements($demande, $request->user());
+
+        return redirect()->route('demandes.show', $demande)->with([
+            'success' => 'Lien de compléments renvoyé avec succès.',
+        ]);
+    }
+
     /**
      * Affiche le formulaire d'édition de la demande.
      *
@@ -272,7 +282,7 @@ class DemandeController extends Controller
 
         $structures = Structure::all();
         $categoriesSocioprofessionnelles = CategorieSocioprofessionnelle::orderBy('ordre')->get();
-        $formAction = URL::temporarySignedRoute('demandes.update', now()->addDays(3), ['demande' => $demande->id]);
+        $formAction = URL::temporarySignedRoute('demandes.update', now()->addDays(ApplicationSetting::complementLinkValidityDays()), ['demande' => $demande->id]);
 
         return view('demandes.edit', compact('demande', 'structures', 'categoriesSocioprofessionnelles', 'formAction'));
     }

@@ -4,6 +4,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DemandeController;
 use App\Http\Controllers\JustificatifController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\Settings\ApplicationSettingsController;
 use App\Http\Controllers\Settings\PieceRequiseController;
 use App\Http\Controllers\Settings\ReferentielController;
 use App\Http\Controllers\Settings\SettingsController;
@@ -32,6 +33,7 @@ Route::get('/demandes/verifier/{code}', [DemandeController::class, 'verifier'])-
 Route::middleware('auth')->group(function () {
     Route::get('/demandes', [DemandeController::class, 'index'])->name('demandes.index');
     Route::post('/demandes/{demande}/changer-etat', [DemandeController::class, 'changerEtat'])->name('demandes.changerEtat');
+    Route::post('/demandes/{demande}/renvoyer-complements', [DemandeController::class, 'renvoyerComplements'])->name('demandes.renvoyer-complements');
     Route::post('/demandes/{demande}/imputer', [DemandeController::class, 'imputer'])->middleware('role:ADMIN|CHEF_DE_DIVISION')->name('demandes.imputer');
     Route::get('demandes/{demande}/voirPdf', [DemandeController::class, 'voirPdf'])->name('demandes.voirPdf');
     Route::get('/demandes/data', [DemandeController::class, 'data'])->name('demandes.data');
@@ -55,6 +57,7 @@ Route::middleware(['auth', 'verified', 'role:ADMIN'])->group(function () {
     Route::get('/users', [UserController::class, 'index'])->name('users.index');
 
     Route::get('/parametres', SettingsController::class)->name('settings.index');
+    Route::put('/parametres/application', [ApplicationSettingsController::class, 'update'])->name('settings.application.update');
     Route::resource('/parametres/types-demandes', TypeDocumentController::class)
         ->parameters(['types-demandes' => 'typeDocument'])
         ->names('settings.type-documents');

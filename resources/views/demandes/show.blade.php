@@ -197,6 +197,13 @@
                     @elseif($etat === EtatDemande::EN_SIGNATURE && auth()->user()->hasRole('DRH'))
                         <x-primary-button type="button" class="w-full justify-center" x-on:click="nouvelEtat = 'SIGNEE'; agentVisible = false; etatModalOpen = true">Signer la demande</x-primary-button>
                         <x-danger-button type="button" class="w-full justify-center" x-on:click="nouvelEtat = 'SUSPENDUE'; agentVisible = false; etatModalOpen = true">Suspendre la demande</x-danger-button>
+                    @elseif($etat === EtatDemande::COMPLEMENTS && auth()->id() === $demande->agent_id)
+                        <form method="POST" action="{{ route('demandes.renvoyer-complements', $demande) }}">
+                            @csrf
+                            <button type="submit" class="inline-flex w-full justify-center rounded-md bg-senegal-yellow px-4 py-2 text-xs font-semibold uppercase tracking-widest text-ink-900 hover:bg-yellow-300">
+                                Renvoyer le lien de compléments
+                            </button>
+                        </form>
                     @else
                         <span class="text-sm text-ink-500">Aucune action disponible.</span>
                     @endif

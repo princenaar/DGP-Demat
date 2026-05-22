@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\ApplicationSetting;
 use App\Models\CategorieSocioprofessionnelle;
 use App\Models\Demande;
 use App\Models\EtatDemande;
@@ -47,12 +48,47 @@ class AdminSettingsTest extends TestCase
     {
         $this->actingAs($this->admin)->get(route('settings.index'))
             ->assertOk()
-            ->assertSee('Paramètres');
+            ->assertSee('Paramètres')
+            ->assertSee('Liens de compléments')
+            ->assertSee('Validité des liens (jours)');
 
         $user = User::factory()->create();
 
         $this->actingAs($user)->get(route('settings.index'))
             ->assertForbidden();
+    }
+
+    public function test_admin_can_update_complement_link_validity_days(): void
+    {
+        $this->actingAs($this->admin)->put(route('settings.application.update'), [
+            'complement_link_validity_days' => 12,
+        ])
+            ->assertRedirect(route('settings.index'))
+            ->assertSessionHas('status', 'Paramètres applicatifs mis à jour.');
+
+        $this->assertSame(12, ApplicationSetting::complementLinkValidityDays());
+    }
+
+    public function test_complement_link_validity_days_must_be_between_one_and_fifteen(): void
+    {
+        foreach ([0, 16, '', 'abc'] as $value) {
+            $this->actingAs($this->admin)->from(route('settings.index'))->put(route('settings.application.update'), [
+                'complement_link_validity_days' => $value,
+            ])
+                ->assertRedirect(route('settings.index'))
+                ->assertSessionHasErrors('complement_link_validity_days');
+        }
+    }
+
+    public function test_non_admin_cannot_update_application_settings(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)->put(route('settings.application.update'), [
+            'complement_link_validity_days' => 10,
+        ])->assertForbidden();
+
+        $this->assertSame(3, ApplicationSetting::complementLinkValidityDays());
     }
 
     public function test_admin_can_manage_type_document_piece_and_workflow(): void

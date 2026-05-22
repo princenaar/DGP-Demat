@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Mail\DemandeComplementMail;
 use App\Mail\DemandeSigneeMail;
+use App\Models\ApplicationSetting;
 use App\Models\Demande;
 use App\Models\EtatDemande;
 use App\Models\HistoriqueEtat;
@@ -111,6 +112,23 @@ class WorkflowEngine
         });
     }
 
+    public function renvoyerDemandeComplements(Demande $demande, User $user): Demande
+    {
+        return DB::transaction(function () use ($demande, $user): Demande {
+            $demande = Demande::query()->whereKey($demande->id)->lockForUpdate()->firstOrFail();
+            $demande->loadMissing('etatDemande');
+
+            if ($demande->etatDemande?->nom !== EtatDemande::COMPLEMENTS || $demande->agent_id !== $user->id) {
+                abort(403, 'Action non autorisée.');
+            }
+
+            $this->envoyerDemandeComplements($demande);
+            $this->enregistrerHistorique($demande, $user, 'Lien de compléments renvoyé.');
+
+            return $demande->refresh();
+        });
+    }
+
     /**
      * @param  array{commentaire?: string, agent_id?: int|null}  $payload
      */
@@ -155,13 +173,14 @@ class WorkflowEngine
 
     private function envoyerDemandeComplements(Demande $demande, ?string $commentaireAgent = null): null
     {
+        $validityDays = ApplicationSetting::complementLinkValidityDays();
         $lien = URL::temporarySignedRoute(
             'demandes.edit',
-            now()->addDays(3),
+            now()->addDays($validityDays),
             ['demande' => $demande->id]
         );
 
-        Mail::to($demande->email)->send(new DemandeComplementMail($demande, $lien, $commentaireAgent));
+        Mail::to($demande->email)->send(new DemandeComplementMail($demande, $lien, $commentaireAgent, $validityDays));
 
         return null;
     }

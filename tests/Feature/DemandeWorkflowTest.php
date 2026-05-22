@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Mail\DemandeComplementMail;
 use App\Mail\DemandeSigneeMail;
+use App\Models\ApplicationSetting;
 use App\Models\CategorieSocioprofessionnelle;
 use App\Models\Demande;
 use App\Models\EtatDemande;
@@ -1244,6 +1245,7 @@ class DemandeWorkflowTest extends TestCase
     public function test_agent_with_accueil_role_can_request_complements_when_assigned(): void
     {
         Mail::fake();
+        ApplicationSetting::setComplementLinkValidityDays(7);
 
         $agentAccueil = User::factory()->create();
         $agentAccueil->assignRole('AGENT', 'ACCUEIL');
@@ -1267,7 +1269,78 @@ class DemandeWorkflowTest extends TestCase
             DemandeComplementMail::class,
             fn (DemandeComplementMail $mail): bool => str_contains($mail->lien, '/demandes/'.$demande->id.'/edit')
                 && $mail->commentaireAgent === 'Pièces manquantes'
+                && $mail->validityDays === 7
         );
+    }
+
+    public function test_complement_edit_form_action_uses_configured_validity_days(): void
+    {
+        ApplicationSetting::setComplementLinkValidityDays(6);
+        $demande = $this->makeDemande(EtatDemande::COMPLEMENTS);
+
+        $response = $this->get(\URL::signedRoute('demandes.edit', ['demande' => $demande->id]))
+            ->assertOk();
+
+        parse_str(parse_url($response->viewData('formAction'), PHP_URL_QUERY), $query);
+
+        $this->assertLessThanOrEqual(5, abs((int) $query['expires'] - now()->addDays(6)->timestamp));
+    }
+
+    public function test_assigned_agent_can_resend_complement_link(): void
+    {
+        Mail::fake();
+        ApplicationSetting::setComplementLinkValidityDays(5);
+
+        $agent = User::factory()->create();
+        $agent->assignRole('AGENT');
+        $demande = $this->makeDemande(EtatDemande::COMPLEMENTS, ['agent_id' => $agent->id]);
+
+        $this->actingAs($agent)->get(route('demandes.show', $demande))
+            ->assertOk()
+            ->assertSee('Renvoyer le lien de compléments');
+
+        $this->actingAs($agent)->post(route('demandes.renvoyer-complements', $demande))
+            ->assertRedirect(route('demandes.show', $demande))
+            ->assertSessionHas('success', 'Lien de compléments renvoyé avec succès.');
+
+        Mail::assertSent(
+            DemandeComplementMail::class,
+            fn (DemandeComplementMail $mail): bool => $mail->demande->is($demande)
+                && $mail->validityDays === 5
+                && str_contains($mail->lien, '/demandes/'.$demande->id.'/edit')
+        );
+
+        $this->assertDatabaseHas('historique_etats', [
+            'demande_id' => $demande->id,
+            'etat_demande_id' => $demande->etat_demande_id,
+            'user_id' => $agent->id,
+            'commentaire' => 'Lien de compléments renvoyé.',
+        ]);
+    }
+
+    public function test_complement_link_resend_is_only_available_for_complement_state_and_assigned_agent(): void
+    {
+        Mail::fake();
+
+        $assignedAgent = User::factory()->create();
+        $assignedAgent->assignRole('AGENT');
+        $otherAgent = User::factory()->create();
+        $otherAgent->assignRole('AGENT');
+
+        $validatedDemande = $this->makeDemande(EtatDemande::VALIDEE, ['agent_id' => $assignedAgent->id]);
+        $complementDemande = $this->makeDemande(EtatDemande::COMPLEMENTS, ['agent_id' => $assignedAgent->id]);
+
+        $this->actingAs($assignedAgent)->get(route('demandes.show', $validatedDemande))
+            ->assertOk()
+            ->assertDontSee('Renvoyer le lien de compléments');
+
+        $this->actingAs($otherAgent)->post(route('demandes.renvoyer-complements', $complementDemande))
+            ->assertForbidden();
+
+        $this->actingAs($assignedAgent)->post(route('demandes.renvoyer-complements', $validatedDemande))
+            ->assertForbidden();
+
+        Mail::assertNothingSent();
     }
 
     public function test_replaying_same_state_change_redirects_without_repeating_side_effects(): void

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Settings;
 
 use App\Http\Controllers\Controller;
+use App\Models\ApplicationSetting;
 use App\Models\CategorieSocioprofessionnelle;
 use App\Models\EtatDemande;
 use App\Models\PieceRequise;
@@ -25,6 +26,7 @@ class SettingsController extends Controller
             'etatsCount' => EtatDemande::count(),
             'usersCount' => User::count(),
             'inactiveUsersCount' => User::where('is_active', false)->count(),
+            'complementLinkValidityDays' => ApplicationSetting::complementLinkValidityDays(),
         ]);
     }
 }

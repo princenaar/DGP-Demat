@@ -12,7 +12,7 @@ Votre demande **{{ $demande->numero_affiche }}** pour le document **{{ $demande-
 
 @endif
 
-Cliquez sur le bouton ci-dessous pour compléter votre dossier. Ce lien est valable pendant 3 jours.
+Cliquez sur le bouton ci-dessous pour compléter votre dossier. Ce lien est valable pendant {{ $validityDays }} jour{{ $validityDays > 1 ? 's' : '' }}.
 
 <x-mail::button :url="$url" color="success">
 Compléter la demande

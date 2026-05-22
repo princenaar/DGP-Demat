@@ -21,6 +21,7 @@ class DemandeComplementMail extends Mailable
         public Demande $demande,
         public string $lien,
         public ?string $commentaireAgent = null,
+        public int $validityDays = 3,
     ) {}
 
     /**
@@ -44,6 +45,7 @@ class DemandeComplementMail extends Mailable
                 'demande' => $this->demande,
                 'url' => $this->lien,
                 'commentaireAgent' => $this->commentaireAgent,
+                'validityDays' => $this->validityDays,
             ],
         );
 
