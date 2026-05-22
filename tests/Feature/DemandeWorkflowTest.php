@@ -525,7 +525,7 @@ class DemandeWorkflowTest extends TestCase
             'date_depart_retraite' => null,
             'categorie_socioprofessionnelle_id' => $category->id,
             'date_naissance' => '1990-05-12',
-            'lieu_naissance' => 'Dakar',
+            'lieu_naissance' => 'dakar plateau',
         ]);
 
         $html = view('demandes.pdf.ANE', [
@@ -534,7 +534,8 @@ class DemandeWorkflowTest extends TestCase
         ])->render();
 
         $this->assertStringContainsString('ATTESTATION DE NON ENGAGEMENT', $html);
-        $this->assertStringContainsString('M./Mme&nbsp;Awa&nbsp;DIOP</strong></span>, Infirmier breveté spécialisé, <span class="nowrap">né(e) le&nbsp;12 mai 1990</span> à Dakar', $html);
+        $this->assertStringContainsString('M./Mme&nbsp;Awa&nbsp;DIOP</strong></span>, Infirmier breveté spécialisé, <span class="nowrap">né(e) le&nbsp;12 mai 1990</span> à Dakar Plateau,', $html);
+        $this->assertStringNotContainsString('Dakar Plateau ,', $html);
         $this->assertStringContainsString('n’est ni boursier(ère), ni contractuel(le)', $html);
         $this->assertStringNotContainsString('pension de retraite', $html);
         $this->assertStringNotContainsString('ATTESTATION DE NON ACTIVITE DANS LA FONCTION PUBLIQUE', $html);
