@@ -7,6 +7,9 @@
         && $demande->agent_id === null
         && $demande->typeDocument?->defaultAgents()->whereKey(auth()->id())->where('is_active', true)->exists();
     $badgeClass = EtatDemande::badgeClassFor($etat);
+    $requiredFields = $demande->typeDocument?->champs_requis ?? [];
+    $isRequiredField = fn (string $field): bool => (bool) ($requiredFields[$field] ?? false);
+    $formatDate = fn ($date): string => $date ? Carbon::parse($date)->format('d/m/Y') : 'N/A';
 @endphp
 
 @extends('layouts.app')
@@ -83,34 +86,40 @@
                             <dd class="text-ink-900">{{ $demande->structure->nom ?? 'N/A' }}</dd>
                         </div>
                         @endif
-                        @if($demande->typeDocument?->code !== 'ANE')
+                        @if($isRequiredField('categorie_socioprofessionnelle_id') || $demande->categorieSocioprofessionnelle)
                         <div>
                             <dt class="text-sm font-medium text-ink-700">Catégorie socioprofessionnelle</dt>
                             <dd class="text-ink-900">{{ $demande->categorieSocioprofessionnelle?->libelle ?? 'N/A' }}</dd>
                         </div>
                         @endif
-                        @if($demande->date_naissance)
+                        @if($isRequiredField('date_naissance') || $demande->date_naissance)
                             <div>
                                 <dt class="text-sm font-medium text-ink-700">Date de naissance</dt>
-                                <dd class="text-ink-900">{{ Carbon::parse($demande->date_naissance)->format('d/m/Y') }}</dd>
+                                <dd class="text-ink-900">{{ $formatDate($demande->date_naissance) }}</dd>
                             </div>
                         @endif
-                        @if($demande->date_prise_service)
+                        @if($isRequiredField('lieu_naissance') || filled($demande->lieu_naissance))
+                            <div>
+                                <dt class="text-sm font-medium text-ink-700">Lieu de naissance</dt>
+                                <dd class="text-ink-900">{{ $demande->lieu_naissance ?? 'N/A' }}</dd>
+                            </div>
+                        @endif
+                        @if($isRequiredField('date_prise_service') || $demande->date_prise_service)
                             <div>
                                 <dt class="text-sm font-medium text-ink-700">Date de prise de service</dt>
-                                <dd class="text-ink-900">{{ Carbon::parse($demande->date_prise_service)->format('d/m/Y') }}</dd>
+                                <dd class="text-ink-900">{{ $formatDate($demande->date_prise_service) }}</dd>
                             </div>
                         @endif
-                        @if($demande->date_fin_service)
+                        @if($isRequiredField('date_fin_service') || $demande->date_fin_service)
                             <div>
                                 <dt class="text-sm font-medium text-ink-700">Date de fin de service</dt>
-                                <dd class="text-ink-900">{{ Carbon::parse($demande->date_fin_service)->format('d/m/Y') }}</dd>
+                                <dd class="text-ink-900">{{ $formatDate($demande->date_fin_service) }}</dd>
                             </div>
                         @endif
-                        @if($demande->typeDocument?->code !== 'ANE' && $demande->date_depart_retraite)
+                        @if($demande->typeDocument?->code !== 'ANE' && ($isRequiredField('date_depart_retraite') || $demande->date_depart_retraite))
                             <div>
                                 <dt class="text-sm font-medium text-ink-700">Date de départ à la retraite</dt>
-                                <dd class="text-ink-900">{{ Carbon::parse($demande->date_depart_retraite)->format('d/m/Y') }}</dd>
+                                <dd class="text-ink-900">{{ $formatDate($demande->date_depart_retraite) }}</dd>
                             </div>
                         @endif
                         <div>

@@ -1013,6 +1013,56 @@ class DemandeWorkflowTest extends TestCase
             ->assertSee('Traitement en cours...');
     }
 
+    public function test_demande_show_displays_missing_required_ane_fields(): void
+    {
+        $admin = User::factory()->create();
+        $admin->assignRole('ADMIN');
+        $ane = TypeDocument::where('code', 'ANE')->firstOrFail();
+        $demande = $this->makeDemande(EtatDemande::VALIDEE, [
+            'type_document_id' => $ane->id,
+            'structure_id' => null,
+            'statut' => 'externe',
+            'categorie_socioprofessionnelle_id' => null,
+            'date_naissance' => null,
+            'lieu_naissance' => null,
+        ]);
+
+        $response = $this->actingAs($admin)->get(route('demandes.show', $demande));
+
+        $response
+            ->assertOk()
+            ->assertSeeText('Catégorie socioprofessionnelle')
+            ->assertSeeText('Date de naissance')
+            ->assertSeeText('Lieu de naissance')
+            ->assertDontSeeText('Structure');
+
+        $this->assertGreaterThanOrEqual(3, substr_count($response->getContent(), '>N/A<'));
+    }
+
+    public function test_demande_show_displays_missing_required_travail_category_and_hides_optional_dates(): void
+    {
+        $admin = User::factory()->create();
+        $admin->assignRole('ADMIN');
+        $trv = TypeDocument::where('code', 'TRV')->firstOrFail();
+        $demande = $this->makeDemande(EtatDemande::VALIDEE, [
+            'type_document_id' => $trv->id,
+            'categorie_socioprofessionnelle_id' => null,
+            'date_fin_service' => null,
+            'date_depart_retraite' => null,
+        ]);
+
+        $response = $this->actingAs($admin)->get(route('demandes.show', $demande));
+
+        $response
+            ->assertOk()
+            ->assertSeeText('Catégorie socioprofessionnelle')
+            ->assertSeeText('Date de prise de service')
+            ->assertDontSeeText('Date de fin de service')
+            ->assertDontSeeText('Date de départ à la retraite');
+
+        $this->assertStringContainsString('<dd class="text-ink-900">N/A</dd>', $response->getContent());
+    }
+
     public function test_demande_show_renders_document_viewer_for_pdf_and_image_justificatifs(): void
     {
         $admin = User::factory()->create();

@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Mail\DemandeComplementMail;
+use App\Models\CategorieSocioprofessionnelle;
 use App\Models\Demande;
 use App\Models\EtatDemande;
 use App\Models\Structure;
@@ -10,6 +11,7 @@ use App\Models\TypeDocument;
 use App\Models\User;
 use App\Models\WorkflowTransition;
 use App\Services\WorkflowEngine;
+use Database\Seeders\CategorieSocioprofessionnelleSeeder;
 use Database\Seeders\EtatDemandeSeeder;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Database\Seeders\StructureSeeder;
@@ -32,6 +34,7 @@ class WorkflowEngineTest extends TestCase
             RolesAndPermissionsSeeder::class,
             EtatDemandeSeeder::class,
             StructureSeeder::class,
+            CategorieSocioprofessionnelleSeeder::class,
             TypeDocumentSeeder::class,
             WorkflowTransitionSeeder::class,
         ]);
@@ -177,6 +180,7 @@ class WorkflowEngineTest extends TestCase
             'telephone' => '771234567',
             'statut' => 'contractuel',
             'nin' => '1234567890123',
+            'categorie_socioprofessionnelle_id' => CategorieSocioprofessionnelle::value('id'),
             'date_prise_service' => '2024-01-15',
         ], $attributes));
     }
