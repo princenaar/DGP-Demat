@@ -81,6 +81,8 @@ class DemandeController extends Controller
                 'date_prise_service' => $request->date_prise_service,
                 'date_fin_service' => $request->date_fin_service,
                 'date_depart_retraite' => $request->date_depart_retraite,
+                'date_naissance' => $request->date_naissance,
+                'lieu_naissance' => $request->lieu_naissance,
 
                 'etat_demande_id' => EtatDemande::where('nom', EtatDemande::EN_ATTENTE)->value('id'),
             ]);
@@ -287,7 +289,6 @@ class DemandeController extends Controller
             $demande->forceFill([
                 'matricule' => null,
                 'structure_id' => null,
-                'categorie_socioprofessionnelle_id' => null,
                 'date_depart_retraite' => null,
             ]);
         }

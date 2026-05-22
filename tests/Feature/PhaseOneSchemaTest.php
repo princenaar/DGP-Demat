@@ -53,6 +53,8 @@ class PhaseOneSchemaTest extends TestCase
             'numero_annee',
             'numero_sequence',
             'verification_code',
+            'date_naissance',
+            'lieu_naissance',
         ]));
 
         $this->assertFalse(Schema::hasColumn('demandes', 'categorie_socioprofessionnelle'));
@@ -187,12 +189,16 @@ class PhaseOneSchemaTest extends TestCase
 
         $this->assertSame('ANE', $ane->code);
         $this->assertSame('externe', $ane->eligibilite);
-        $this->assertSame([], $ane->champs_requis);
+        $this->assertSame([
+            'categorie_socioprofessionnelle_id' => true,
+            'date_naissance' => true,
+            'lieu_naissance' => true,
+        ], $ane->champs_requis);
         $this->assertSame('ANA-202600001', $demande->numero_demande);
         $this->assertSame('externe', $demande->statut);
         $this->assertNull($demande->matricule);
         $this->assertNull($demande->structure_id);
-        $this->assertNull($demande->categorie_socioprofessionnelle_id);
+        $this->assertNotNull($demande->categorie_socioprofessionnelle_id);
         $this->assertNull($demande->date_depart_retraite);
     }
 

@@ -306,7 +306,7 @@
                             </div>
                         </div>
 
-                        <div x-show="! isAne() && visible('categorie_socioprofessionnelle_id')" x-cloak>
+                        <div x-show="visible('categorie_socioprofessionnelle_id')" x-cloak>
                             <label for="categorie_socioprofessionnelle_id" class="block text-sm font-medium text-gray-700">Catégorie socio-professionnelle <span class="text-red-600" aria-hidden="true" x-text="requiredLabel('categorie_socioprofessionnelle_id')"></span></label>
                             <select name="categorie_socioprofessionnelle_id" id="categorie_socioprofessionnelle_id" class="mt-1 block w-full rounded-md border-gray-300 focus:border-senegal-green focus:ring-senegal-green" x-bind:class="fieldClass('categorie_socioprofessionnelle_id')" x-on:input="clearFieldState('categorie_socioprofessionnelle_id')" x-on:blur="validateField('categorie_socioprofessionnelle_id', $event.target)" x-bind:required="required('categorie_socioprofessionnelle_id')">
                                 <option value="">Sélectionner une catégorie</option>
@@ -318,6 +318,18 @@
                         </div>
 
                         <div class="grid grid-cols-1 gap-5 sm:grid-cols-3">
+                            <div x-show="visible('date_naissance')" x-cloak>
+                                <label for="date_naissance" class="block text-sm font-medium text-gray-700">Date de naissance <span class="text-red-600" aria-hidden="true" x-text="requiredLabel('date_naissance')"></span></label>
+                                <x-text-input type="date" name="date_naissance" id="date_naissance" class="mt-1 block w-full" x-bind:class="fieldClass('date_naissance')" :value="old('date_naissance')" x-on:input="clearFieldState('date_naissance')" x-on:blur="validateField('date_naissance', $event.target)" x-bind:required="required('date_naissance')" />
+                                <x-input-error :messages="$errors->get('date_naissance')" class="mt-2 rounded bg-red-50 px-3 py-2" />
+                            </div>
+
+                            <div x-show="visible('lieu_naissance')" x-cloak>
+                                <label for="lieu_naissance" class="block text-sm font-medium text-gray-700">Lieu de naissance <span class="text-red-600" aria-hidden="true" x-text="requiredLabel('lieu_naissance')"></span></label>
+                                <x-text-input type="text" name="lieu_naissance" id="lieu_naissance" class="mt-1 block w-full" x-bind:class="fieldClass('lieu_naissance')" :value="old('lieu_naissance')" x-on:input="clearFieldState('lieu_naissance')" x-on:blur="validateField('lieu_naissance', $event.target)" x-bind:required="required('lieu_naissance')" />
+                                <x-input-error :messages="$errors->get('lieu_naissance')" class="mt-2 rounded bg-red-50 px-3 py-2" />
+                            </div>
+
                             <div x-show="visible('date_prise_service')" x-cloak>
                                 <label for="date_prise_service" class="block text-sm font-medium text-gray-700">Date de prise de service <span class="text-red-600" aria-hidden="true" x-text="requiredLabel('date_prise_service')"></span></label>
                                 <x-text-input type="date" name="date_prise_service" id="date_prise_service" class="mt-1 block w-full" x-bind:class="fieldClass('date_prise_service')" :value="old('date_prise_service')" x-on:input="clearFieldState('date_prise_service')" x-on:blur="validateField('date_prise_service', $event.target)" x-bind:required="required('date_prise_service')" />

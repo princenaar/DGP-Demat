@@ -5,6 +5,7 @@
     $nom = Str::upper($demande->nom);
     $categorie = $demande->categorieSocioprofessionnelle?->libelle;
     $trailingPunctuation = $trailingPunctuation ?? '';
+    $includeBirthInfo = $includeBirthInfo ?? false;
 
     $segments = [
         '<span class="nowrap"><strong>M./Mme&nbsp;'.e($prenom).'&nbsp;'.e($nom).'</strong></span>',
@@ -12,6 +13,10 @@
 
     if ($categorie) {
         $segments[] = e($categorie);
+    }
+
+    if ($includeBirthInfo && $demande->date_naissance && $demande->lieu_naissance) {
+        $segments[] = '<span class="nowrap">né(e) le&nbsp;'.e($demande->date_naissance->isoFormat($demande->date_naissance->day == 1 ? 'Do MMMM YYYY' : 'D MMMM YYYY')).'</span> à '.e($demande->lieu_naissance);
     }
 
     if ($demande->statut === 'contractuel') {

@@ -65,7 +65,10 @@ class DocumentTemplateBrandingTest extends TestCase
         $this->assertStringContainsString('signature-block keep-together', $layout);
         $this->assertStringContainsString('class="numero nowrap"', $layout);
         $this->assertStringContainsString('font-size: 19pt;', $layout);
-        $this->assertStringContainsString('margin-bottom: 40px;', $layout);
+        $this->assertStringContainsString('padding: 2cm 1cm;', $layout);
+        $this->assertStringContainsString('display: inline-block;', $layout);
+        $this->assertStringContainsString('margin-bottom: 20px;', $layout);
+        $this->assertStringContainsString('bottom: 2.2cm;', $layout);
         $this->assertStringContainsString('margin-top: 0;', $layout);
     }
 }

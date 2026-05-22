@@ -96,6 +96,7 @@ class DemandeWorkflowTest extends TestCase
 
         $type = TypeDocument::where('code', 'TRV')->firstOrFail();
         $structure = Structure::firstOrFail();
+        $category = CategorieSocioprofessionnelle::firstOrFail();
 
         $response = $this->post(route('demandes.store'), [
             'type_document_id' => $type->id,
@@ -107,6 +108,7 @@ class DemandeWorkflowTest extends TestCase
             'structure_id' => $structure->id,
             'email' => 'awa.diop@example.test',
             'telephone' => '+221 77 123 45 67',
+            'categorie_socioprofessionnelle_id' => $category->id,
             'date_prise_service' => '2024-01-15',
             'g-recaptcha-response' => 'valid-token',
             'fichiers' => [
@@ -144,6 +146,7 @@ class DemandeWorkflowTest extends TestCase
         $type = TypeDocument::where('code', 'TRV')->firstOrFail();
         $type->defaultAgents()->attach($agent);
         $structure = Structure::firstOrFail();
+        $category = CategorieSocioprofessionnelle::firstOrFail();
 
         $response = $this->post(route('demandes.store'), [
             'type_document_id' => $type->id,
@@ -154,6 +157,7 @@ class DemandeWorkflowTest extends TestCase
             'structure_id' => $structure->id,
             'email' => 'moussa.ndiaye@example.test',
             'telephone' => '+221 77 123 45 68',
+            'categorie_socioprofessionnelle_id' => $category->id,
             'date_prise_service' => '2024-01-15',
             'g-recaptcha-response' => 'valid-token',
         ]);
@@ -356,6 +360,7 @@ class DemandeWorkflowTest extends TestCase
 
         $type = TypeDocument::where('code', 'TRV')->firstOrFail();
         $structure = Structure::firstOrFail();
+        $category = CategorieSocioprofessionnelle::firstOrFail();
 
         Notification::shouldReceive('send')
             ->once()
@@ -372,6 +377,7 @@ class DemandeWorkflowTest extends TestCase
             'structure_id' => $structure->id,
             'email' => 'awa.diop@example.test',
             'telephone' => '+221 77 123 45 67',
+            'categorie_socioprofessionnelle_id' => $category->id,
             'date_prise_service' => '2024-01-15',
             'g-recaptcha-response' => 'valid-token',
             'fichiers' => [
@@ -402,6 +408,7 @@ class DemandeWorkflowTest extends TestCase
 
         $type = TypeDocument::where('code', 'TRV')->firstOrFail();
         $structure = Structure::firstOrFail();
+        $category = CategorieSocioprofessionnelle::firstOrFail();
         $filesystem = \Mockery::mock(FilesystemFactory::class);
 
         $filesystem->shouldReceive('disk')
@@ -421,6 +428,7 @@ class DemandeWorkflowTest extends TestCase
             'structure_id' => $structure->id,
             'email' => 'awa.diop@example.test',
             'telephone' => '+221 77 123 45 67',
+            'categorie_socioprofessionnelle_id' => $category->id,
             'date_prise_service' => '2024-01-15',
             'g-recaptcha-response' => 'valid-token',
             'fichiers' => [
@@ -505,11 +513,19 @@ class DemandeWorkflowTest extends TestCase
     public function test_non_engagement_pdf_uses_short_title(): void
     {
         $ane = TypeDocument::where('code', 'ANE')->firstOrFail();
+        $category = CategorieSocioprofessionnelle::create([
+            'libelle' => 'Infirmier breveté spécialisé',
+            'code' => 'INFIRMIER_BREVETE_SPECIALISE',
+            'ordre' => 998,
+        ]);
         $demande = $this->makeDemande(EtatDemande::VALIDEE, [
             'type_document_id' => $ane->id,
             'structure_id' => null,
             'statut' => 'externe',
             'date_depart_retraite' => null,
+            'categorie_socioprofessionnelle_id' => $category->id,
+            'date_naissance' => '1990-05-12',
+            'lieu_naissance' => 'Dakar',
         ]);
 
         $html = view('demandes.pdf.ANE', [
@@ -518,7 +534,8 @@ class DemandeWorkflowTest extends TestCase
         ])->render();
 
         $this->assertStringContainsString('ATTESTATION DE NON ENGAGEMENT', $html);
-        $this->assertStringContainsString('n’est lié(e) par aucun engagement', $html);
+        $this->assertStringContainsString('M./Mme&nbsp;Awa&nbsp;DIOP</strong></span>, Infirmier breveté spécialisé, <span class="nowrap">né(e) le&nbsp;12 mai 1990</span> à Dakar', $html);
+        $this->assertStringContainsString('n’est ni boursier(ère), ni contractuel(le)', $html);
         $this->assertStringNotContainsString('pension de retraite', $html);
         $this->assertStringNotContainsString('ATTESTATION DE NON ACTIVITE DANS LA FONCTION PUBLIQUE', $html);
     }
@@ -583,6 +600,25 @@ class DemandeWorkflowTest extends TestCase
         $this->assertDoesNotMatchRegularExpression('/<strong>[^<]*[,.;:!?]\s*<\/strong>/', $html);
     }
 
+    public function test_travail_pdf_places_category_immediately_after_name(): void
+    {
+        $category = CategorieSocioprofessionnelle::create([
+            'libelle' => 'Sage-Femme maîtresse',
+            'code' => 'SAGE_FEMME_MAITRESSE_TEST',
+            'ordre' => 997,
+        ]);
+        $demande = $this->makeDemande(EtatDemande::VALIDEE, [
+            'categorie_socioprofessionnelle_id' => $category->id,
+        ]);
+
+        $html = view('demandes.pdf.TRV', [
+            'demande' => $demande->load('agent', 'typeDocument', 'categorieSocioprofessionnelle'),
+            'qrCode' => null,
+        ])->render();
+
+        $this->assertStringContainsString('M./Mme&nbsp;Awa&nbsp;DIOP</strong></span>, Sage-Femme maîtresse', $html);
+    }
+
     public function test_etatique_demande_requires_matricule(): void
     {
         $type = TypeDocument::firstOrFail();
@@ -642,6 +678,7 @@ class DemandeWorkflowTest extends TestCase
     {
         $type = TypeDocument::where('code', 'TRV')->firstOrFail();
         $structure = Structure::firstOrFail();
+        $category = CategorieSocioprofessionnelle::firstOrFail();
         Http::fake([
             'www.google.com/recaptcha/api/siteverify' => Http::response(['success' => false]),
         ]);
@@ -656,6 +693,7 @@ class DemandeWorkflowTest extends TestCase
             'structure_id' => $structure->id,
             'email' => 'awa.diop@example.test',
             'telephone' => '+221 77 123 45 67',
+            'categorie_socioprofessionnelle_id' => $category->id,
             'date_prise_service' => '2024-01-15',
             'g-recaptcha-response' => 'invalid-token',
         ]);
@@ -696,6 +734,7 @@ class DemandeWorkflowTest extends TestCase
     {
         $type = TypeDocument::where('code', 'TRV')->firstOrFail();
         $structure = Structure::firstOrFail();
+        $category = CategorieSocioprofessionnelle::firstOrFail();
         Http::fake([
             'www.google.com/recaptcha/api/siteverify' => fn () => throw new ConnectionException('Timeout'),
         ]);
@@ -709,6 +748,7 @@ class DemandeWorkflowTest extends TestCase
             'structure_id' => $structure->id,
             'email' => 'awa.diop@example.test',
             'telephone' => '+221 77 123 45 67',
+            'categorie_socioprofessionnelle_id' => $category->id,
             'date_prise_service' => '2024-01-15',
             'g-recaptcha-response' => 'valid-token',
         ]);
@@ -722,6 +762,7 @@ class DemandeWorkflowTest extends TestCase
 
         $type = TypeDocument::where('code', 'TRV')->firstOrFail();
         $structure = Structure::firstOrFail();
+        $category = CategorieSocioprofessionnelle::firstOrFail();
 
         $response = $this->post(route('demandes.store'), [
             'type_document_id' => $type->id,
@@ -732,6 +773,7 @@ class DemandeWorkflowTest extends TestCase
             'structure_id' => $structure->id,
             'email' => 'awa.diop@example.test',
             'telephone' => '+221 77 123 45 67',
+            'categorie_socioprofessionnelle_id' => $category->id,
             'date_prise_service' => '2024-01-15',
             'g-recaptcha-response' => 'valid-token',
         ]);
@@ -769,6 +811,45 @@ class DemandeWorkflowTest extends TestCase
         ]);
 
         $type = TypeDocument::where('code', 'ANE')->firstOrFail();
+        $category = CategorieSocioprofessionnelle::firstOrFail();
+
+        $response = $this->post(route('demandes.store'), [
+            'type_document_id' => $type->id,
+            'nom' => 'Diop',
+            'prenom' => 'Awa',
+            'statut' => 'externe',
+            'nin' => '1234567890123',
+            'email' => 'awa.diop@example.test',
+            'telephone' => '+221 77 123 45 67',
+            'categorie_socioprofessionnelle_id' => $category->id,
+            'date_naissance' => '1990-05-12',
+            'lieu_naissance' => 'Dakar',
+            'g-recaptcha-response' => 'valid-token',
+        ]);
+
+        $response->assertRedirect(route('demandes.create'));
+
+        $this->assertDatabaseHas('demandes', [
+            'type_document_id' => $type->id,
+            'statut' => 'externe',
+            'matricule' => null,
+            'structure_id' => null,
+            'categorie_socioprofessionnelle_id' => $category->id,
+            'date_naissance' => '1990-05-12 00:00:00',
+            'lieu_naissance' => 'Dakar',
+        ]);
+
+        $demande = Demande::whereBelongsTo($type)->firstOrFail();
+        $this->assertStringStartsWith('ANE-', $demande->numero_demande);
+    }
+
+    public function test_store_ane_demande_requires_category_birth_date_and_birth_place(): void
+    {
+        Http::fake([
+            'www.google.com/recaptcha/api/siteverify' => Http::response(['success' => true]),
+        ]);
+
+        $type = TypeDocument::where('code', 'ANE')->firstOrFail();
 
         $response = $this->post(route('demandes.store'), [
             'type_document_id' => $type->id,
@@ -781,17 +862,36 @@ class DemandeWorkflowTest extends TestCase
             'g-recaptcha-response' => 'valid-token',
         ]);
 
-        $response->assertRedirect(route('demandes.create'));
+        $response->assertSessionHasErrors([
+            'categorie_socioprofessionnelle_id',
+            'date_naissance',
+            'lieu_naissance',
+        ]);
+    }
 
-        $this->assertDatabaseHas('demandes', [
-            'type_document_id' => $type->id,
-            'statut' => 'externe',
-            'matricule' => null,
-            'structure_id' => null,
+    public function test_store_travail_demande_requires_category(): void
+    {
+        Http::fake([
+            'www.google.com/recaptcha/api/siteverify' => Http::response(['success' => true]),
         ]);
 
-        $demande = Demande::whereBelongsTo($type)->firstOrFail();
-        $this->assertStringStartsWith('ANE-', $demande->numero_demande);
+        $type = TypeDocument::where('code', 'TRV')->firstOrFail();
+        $structure = Structure::firstOrFail();
+
+        $response = $this->post(route('demandes.store'), [
+            'type_document_id' => $type->id,
+            'nom' => 'Diop',
+            'prenom' => 'Awa',
+            'statut' => 'contractuel',
+            'nin' => '1234567890123',
+            'structure_id' => $structure->id,
+            'email' => 'awa.diop@example.test',
+            'telephone' => '+221 77 123 45 67',
+            'date_prise_service' => '2024-01-15',
+            'g-recaptcha-response' => 'valid-token',
+        ]);
+
+        $response->assertSessionHasErrors('categorie_socioprofessionnelle_id');
     }
 
     public function test_store_demande_requires_categorie_id_for_types_that_need_it(): void
@@ -1113,7 +1213,11 @@ class DemandeWorkflowTest extends TestCase
     public function test_update_complemented_demande_returns_it_to_validated_state(): void
     {
         Storage::fake('local');
-        $demande = $this->makeDemande(EtatDemande::COMPLEMENTS, ['nom' => 'Ancien']);
+        $category = CategorieSocioprofessionnelle::firstOrFail();
+        $demande = $this->makeDemande(EtatDemande::COMPLEMENTS, [
+            'nom' => 'Ancien',
+            'categorie_socioprofessionnelle_id' => null,
+        ]);
         $structure = Structure::firstOrFail();
         $url = \URL::temporarySignedRoute('demandes.update', now()->addDays(3), ['demande' => $demande->id]);
 
@@ -1125,6 +1229,7 @@ class DemandeWorkflowTest extends TestCase
             'nin' => $demande->nin,
             'structure_id' => $structure->id,
             'telephone' => '+221 77 111 11 11',
+            'categorie_socioprofessionnelle_id' => $category->id,
             'fichiers' => [
                 UploadedFile::fake()->create('complement.pdf', 64, 'application/pdf'),
             ],
@@ -1136,8 +1241,60 @@ class DemandeWorkflowTest extends TestCase
 
         $demande->refresh();
         $this->assertSame('Nouveau', $demande->nom);
+        $this->assertSame($category->id, $demande->categorie_socioprofessionnelle_id);
         $this->assertSame(EtatDemande::VALIDEE, $demande->etatDemande->nom);
         $this->assertDatabaseHas('fichier_justificatifs', ['nom' => 'complement.pdf']);
+    }
+
+    public function test_update_complemented_ane_demande_requires_and_persists_birth_fields(): void
+    {
+        $ane = TypeDocument::where('code', 'ANE')->firstOrFail();
+        $category = CategorieSocioprofessionnelle::firstOrFail();
+        $demande = $this->makeDemande(EtatDemande::COMPLEMENTS, [
+            'type_document_id' => $ane->id,
+            'structure_id' => null,
+            'statut' => 'externe',
+            'categorie_socioprofessionnelle_id' => null,
+            'date_naissance' => null,
+            'lieu_naissance' => null,
+        ]);
+        $url = \URL::temporarySignedRoute('demandes.update', now()->addDays(3), ['demande' => $demande->id]);
+
+        $this->get(\URL::signedRoute('demandes.edit', ['demande' => $demande->id]))
+            ->assertOk()
+            ->assertSee('name="categorie_socioprofessionnelle_id"', false)
+            ->assertSee('name="date_naissance"', false)
+            ->assertSee('name="lieu_naissance"', false);
+
+        $this->put($url, [
+            'type_document_id' => $demande->type_document_id,
+            'nom' => $demande->nom,
+            'prenom' => $demande->prenom,
+            'statut' => 'externe',
+            'nin' => $demande->nin,
+            'telephone' => '+221 77 111 11 11',
+        ])->assertSessionHasErrors([
+            'categorie_socioprofessionnelle_id',
+            'date_naissance',
+            'lieu_naissance',
+        ]);
+
+        $this->put($url, [
+            'type_document_id' => $demande->type_document_id,
+            'nom' => $demande->nom,
+            'prenom' => $demande->prenom,
+            'statut' => 'externe',
+            'nin' => $demande->nin,
+            'telephone' => '+221 77 111 11 11',
+            'categorie_socioprofessionnelle_id' => $category->id,
+            'date_naissance' => '1991-04-20',
+            'lieu_naissance' => 'Thiès',
+        ])->assertRedirect(route('demandes.create'));
+
+        $demande->refresh();
+        $this->assertSame($category->id, $demande->categorie_socioprofessionnelle_id);
+        $this->assertSame('1991-04-20', $demande->date_naissance->format('Y-m-d'));
+        $this->assertSame('Thiès', $demande->lieu_naissance);
     }
 
     public function test_update_complemented_demande_requires_valid_signature_and_complement_state(): void
@@ -1354,6 +1511,7 @@ class DemandeWorkflowTest extends TestCase
             'telephone' => '771234567',
             'statut' => 'contractuel',
             'nin' => '1234567890123',
+            'categorie_socioprofessionnelle_id' => CategorieSocioprofessionnelle::value('id'),
             'date_prise_service' => '2024-01-15',
         ], $attributes));
     }
@@ -1374,6 +1532,7 @@ class DemandeWorkflowTest extends TestCase
             'structure_id' => Structure::value('id'),
             'email' => 'fatou.ndiaye@example.test',
             'telephone' => '+221 77 123 45 67',
+            'categorie_socioprofessionnelle_id' => CategorieSocioprofessionnelle::value('id'),
             'date_prise_service' => '2024-01-15',
             'g-recaptcha-response' => 'valid-token',
         ], $overrides);

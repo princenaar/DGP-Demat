@@ -58,6 +58,8 @@ class DemandeStoreRequest extends FormRequest
             'date_prise_service' => ['nullable', 'date'],
             'date_fin_service' => ['nullable', 'date', 'after_or_equal:date_prise_service'],
             'date_depart_retraite' => ['nullable', 'date'],
+            'date_naissance' => ['nullable', 'date', 'before:today'],
+            'lieu_naissance' => ['nullable', 'string', 'max:255'],
 
             'fichiers' => ['nullable', 'array', 'max:5'],
             'fichiers.*' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:5120'],
@@ -108,6 +110,8 @@ class DemandeStoreRequest extends FormRequest
             'date_prise_service' => 'date de prise de service',
             'date_fin_service' => 'date de fin de service',
             'date_depart_retraite' => 'date de départ à la retraite',
+            'date_naissance' => 'date de naissance',
+            'lieu_naissance' => 'lieu de naissance',
             'categorie_socioprofessionnelle_id' => 'catégorie socio-professionnelle',
             'fichiers.*' => 'fichier',
         ];

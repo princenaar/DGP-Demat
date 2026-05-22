@@ -24,6 +24,7 @@ class TypeDocumentSeeder extends Seeder
                 'nom' => 'Attestation de travail',
                 'code' => 'TRV',
                 'champs_requis' => [
+                    'categorie_socioprofessionnelle_id' => true,
                     'date_prise_service' => true,
                 ],
                 'eligibilite' => null,
@@ -54,7 +55,11 @@ class TypeDocumentSeeder extends Seeder
             [
                 'nom' => 'Attestation de non engagement avec le ministère de la santé',
                 'code' => 'ANE',
-                'champs_requis' => [],
+                'champs_requis' => [
+                    'categorie_socioprofessionnelle_id' => true,
+                    'date_naissance' => true,
+                    'lieu_naissance' => true,
+                ],
                 'eligibilite' => 'externe',
                 'description' => 'Attestation prouvant que le demandeur est libre de tout engagement.',
                 'icone' => 'shield-check',

@@ -47,6 +47,8 @@ class Demande extends Model
         'date_prise_service',
         'date_fin_service',
         'date_depart_retraite',
+        'date_naissance',
+        'lieu_naissance',
         'agent_id',
         'structure_id',
         'etat_demande_id',
@@ -60,6 +62,7 @@ class Demande extends Model
         'date_prise_service' => 'datetime',
         'date_fin_service' => 'datetime',
         'date_depart_retraite' => 'datetime',
+        'date_naissance' => 'datetime',
     ];
 
     protected static function booted(): void

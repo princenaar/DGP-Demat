@@ -199,7 +199,14 @@ class AdminSettingsTest extends TestCase
 
         $this->assertSame('ANE', $ane->code);
         $this->assertSame('externe', $ane->eligibilite);
-        $this->assertSame([], $ane->champs_requis);
+        $this->assertSame([
+            'categorie_socioprofessionnelle_id' => true,
+            'date_prise_service' => false,
+            'date_fin_service' => false,
+            'date_depart_retraite' => false,
+            'date_naissance' => true,
+            'lieu_naissance' => true,
+        ], $ane->champs_requis);
     }
 
     public function test_admin_can_manage_referentials_and_etats_are_read_only(): void

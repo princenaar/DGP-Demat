@@ -25,7 +25,11 @@ return new class extends Migration
             ->update([
                 'code' => 'ANE',
                 'eligibilite' => 'externe',
-                'champs_requis' => json_encode([], JSON_THROW_ON_ERROR),
+                'champs_requis' => json_encode([
+                    'categorie_socioprofessionnelle_id' => true,
+                    'date_naissance' => true,
+                    'lieu_naissance' => true,
+                ], JSON_THROW_ON_ERROR),
                 'updated_at' => now(),
             ]);
 
@@ -35,7 +39,6 @@ return new class extends Migration
                 'statut' => 'externe',
                 'matricule' => null,
                 'structure_id' => null,
-                'categorie_socioprofessionnelle_id' => null,
                 'date_depart_retraite' => null,
                 'updated_at' => now(),
             ]);

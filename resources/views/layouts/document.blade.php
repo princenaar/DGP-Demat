@@ -31,19 +31,24 @@
 
         .page {
             position: relative;
-            padding: 2cm;
+            padding: 2cm 1cm;
             box-sizing: border-box;
         }
 
+        .title-wrapper {
+            text-align: center;
+        }
+
         .title {
+            display: inline-block;
             font-family: Tahoma, serif;
             text-align: center;
             font-size: 19pt;
             font-weight: bold;
-            padding: 10px;
+            padding: 8px 18px;
             background-color: #ccc;
             border: 1px solid #aaa;
-            margin-bottom: 40px;
+            margin-bottom: 20px;
             margin-top: 150px;
         }
 
@@ -73,9 +78,9 @@
 
         .footer {
             position: absolute;
-            left: 2cm;
-            right: 2cm;
-            bottom: 1.9cm;
+            left: 1cm;
+            right: 1cm;
+            bottom: 2.2cm;
             font-size: 0; /* Supprime l'espace entre inline-block */
         }
 
@@ -133,7 +138,9 @@
 <div class="page">
     <div class="numero nowrap">{!! $demande->reference_document !!}</div>
     <div class="date" style="margin-top: 20px;">Dakar, le {{ Carbon::now()->format('d/m/Y') }}</div>
-    <div class="title">@yield('title')</div>
+    <div class="title-wrapper">
+        <div class="title">@yield('title')</div>
+    </div>
 
     <div class="content">
         @yield('content')
