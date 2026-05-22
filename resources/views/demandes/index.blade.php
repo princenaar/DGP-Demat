@@ -10,6 +10,8 @@
             @include('demandes.partials.etat-filter', [
                 'filterId' => 'demandes-etat-filter',
                 'etatOptions' => $etatOptions,
+                'typeFilterId' => 'demandes-type-filter',
+                'typeOptions' => $typeOptions,
             ])
         </div>
         <div class="overflow-x-auto">
@@ -34,6 +36,7 @@
     @include('demandes.partials.datatable-script', [
         'tableId' => 'demandes-table',
         'filterId' => 'demandes-etat-filter',
+        'typeFilterId' => 'demandes-type-filter',
         'ajaxUrl' => route('demandes.data'),
     ])
 @endpush

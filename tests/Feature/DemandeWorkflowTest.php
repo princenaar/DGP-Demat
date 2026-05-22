@@ -1422,8 +1422,11 @@ class DemandeWorkflowTest extends TestCase
         $this->actingAs($admin)->get(route('demandes.index'))
             ->assertOk()
             ->assertViewHas('etatOptions')
+            ->assertViewHas('typeOptions')
             ->assertSee('Tous les états')
+            ->assertSee('Tous les types')
             ->assertSee('En attente')
+            ->assertSee('Attestation de travail')
             ->assertSeeInOrder(['Prénom', 'Nom', 'Statut', 'Type', 'État', 'Date', 'Actions'])
             ->assertDontSee('Structure')
             ->assertDontSee("{data: 'structure'", false);
@@ -1439,6 +1442,33 @@ class DemandeWorkflowTest extends TestCase
 
         $response = $this->actingAs($admin)->getJson(route('demandes.data', [
             'etat_id' => $etatValideeId,
+        ]));
+
+        $response->assertOk();
+        $payload = $response->json('data');
+
+        $this->assertCount(1, $payload);
+        $this->assertSame($visible->nom, $payload[0]['nom']);
+        $this->assertNotSame($hidden->nom, $payload[0]['nom']);
+    }
+
+    public function test_data_endpoint_filters_rows_by_type_document(): void
+    {
+        $admin = User::factory()->create();
+        $admin->assignRole('ADMIN');
+        $trv = TypeDocument::where('code', 'TRV')->firstOrFail();
+        $afm = TypeDocument::where('code', 'AFM')->firstOrFail();
+        $visible = $this->makeDemande(EtatDemande::VALIDEE, [
+            'type_document_id' => $trv->id,
+            'nom' => 'Visible',
+        ]);
+        $hidden = $this->makeDemande(EtatDemande::VALIDEE, [
+            'type_document_id' => $afm->id,
+            'nom' => 'Cache',
+        ]);
+
+        $response = $this->actingAs($admin)->getJson(route('demandes.data', [
+            'type_document_id' => $trv->id,
         ]));
 
         $response->assertOk();
@@ -1500,13 +1530,33 @@ class DemandeWorkflowTest extends TestCase
         $agent->assignRole('AGENT');
         $otherAgent = User::factory()->create();
         $otherAgent->assignRole('AGENT');
-        $visible = $this->makeDemande(EtatDemande::VALIDEE, ['agent_id' => $agent->id, 'nom' => 'Visible']);
-        $this->makeDemande(EtatDemande::RECEPTIONNEE, ['agent_id' => $agent->id, 'nom' => 'AutreEtat']);
-        $hidden = $this->makeDemande(EtatDemande::VALIDEE, ['agent_id' => $otherAgent->id, 'nom' => 'Cache']);
+        $trv = TypeDocument::where('code', 'TRV')->firstOrFail();
+        $afm = TypeDocument::where('code', 'AFM')->firstOrFail();
+        $visible = $this->makeDemande(EtatDemande::VALIDEE, [
+            'agent_id' => $agent->id,
+            'type_document_id' => $trv->id,
+            'nom' => 'Visible',
+        ]);
+        $this->makeDemande(EtatDemande::RECEPTIONNEE, [
+            'agent_id' => $agent->id,
+            'type_document_id' => $trv->id,
+            'nom' => 'AutreEtat',
+        ]);
+        $this->makeDemande(EtatDemande::VALIDEE, [
+            'agent_id' => $agent->id,
+            'type_document_id' => $afm->id,
+            'nom' => 'AutreType',
+        ]);
+        $hidden = $this->makeDemande(EtatDemande::VALIDEE, [
+            'agent_id' => $otherAgent->id,
+            'type_document_id' => $trv->id,
+            'nom' => 'Cache',
+        ]);
         $etatValideeId = EtatDemande::where('nom', EtatDemande::VALIDEE)->value('id');
 
         $response = $this->actingAs($agent)->getJson(route('demandes.data', [
             'etat_id' => $etatValideeId,
+            'type_document_id' => $trv->id,
         ]));
 
         $response->assertOk();

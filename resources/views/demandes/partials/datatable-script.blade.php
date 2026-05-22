@@ -3,6 +3,7 @@
 <script>
     document.addEventListener('DOMContentLoaded', () => {
         const etatFilter = document.getElementById(@js($filterId));
+        const typeFilter = document.getElementById(@js($typeFilterId ?? null));
         const table = new window.DataTable(@js('#' . $tableId), {
             processing: true,
             serverSide: true,
@@ -10,6 +11,7 @@
                 url: @js($ajaxUrl),
                 data(data) {
                     data.etat_id = etatFilter?.value ?? '';
+                    data.type_document_id = typeFilter?.value ?? '';
                 }
             },
             columns: [
@@ -39,5 +41,6 @@
         });
 
         etatFilter?.addEventListener('change', () => table.ajax.reload());
+        typeFilter?.addEventListener('change', () => table.ajax.reload());
     });
 </script>

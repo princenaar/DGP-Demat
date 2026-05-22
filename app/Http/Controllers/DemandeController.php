@@ -135,6 +135,7 @@ class DemandeController extends Controller
     {
         return view('demandes.index', [
             'etatOptions' => $etatFilter->options(),
+            'typeOptions' => TypeDocument::orderBy('nom')->get(['id', 'nom']),
         ]);
     }
 
@@ -175,6 +176,11 @@ class DemandeController extends Controller
         }
 
         $etatFilter->applyToQuery($query, $request);
+        $typeDocumentId = $this->selectedTypeDocumentId($request);
+
+        if ($typeDocumentId) {
+            $query->where('type_document_id', $typeDocumentId);
+        }
 
         return DataTables::of($query)
             ->addColumn('statut_label', fn ($demande): string => ucfirst($demande->statut))
@@ -414,5 +420,22 @@ class DemandeController extends Controller
             ->setPaper('A4');
 
         return $pdf->output();
+    }
+
+    private function selectedTypeDocumentId(Request $request): ?int
+    {
+        $typeDocumentId = $request->query('type_document_id');
+
+        if (! is_numeric($typeDocumentId)) {
+            return null;
+        }
+
+        $typeDocumentId = (int) $typeDocumentId;
+
+        if ($typeDocumentId < 1) {
+            return null;
+        }
+
+        return TypeDocument::whereKey($typeDocumentId)->exists() ? $typeDocumentId : null;
     }
 }
