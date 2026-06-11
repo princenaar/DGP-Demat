@@ -574,7 +574,7 @@ class DemandeWorkflowTest extends TestCase
         ])->render();
 
         $this->assertStringContainsString('ATTESTATION DE NON ENGAGEMENT', $html);
-        $this->assertStringContainsString('M./Mme&nbsp;Awa&nbsp;DIOP</strong></span>, <span class="nowrap">né(e) le&nbsp;12 mai 1990</span> à Dakar Plateau, CNI <strong><span class="nowrap" style="display: inline-block;">n°&nbsp;1234567890123</span></strong>,', $html);
+        $this->assertStringContainsString('M./Mme&nbsp;Awa&nbsp;DIOP</strong></span>, <span class="nowrap">né(e) le&nbsp;12 mai 1990</span> à Dakar Plateau, CNI <strong><span class="nowrap">n°&nbsp;1234567890123</span></strong>,', $html);
         $this->assertStringNotContainsString('Infirmier breveté spécialisé', $html);
         $this->assertStringNotContainsString('Dakar Plateau ,', $html);
         $this->assertStringContainsString('n’est ni boursier(ère), ni contractuel(le)', $html);
