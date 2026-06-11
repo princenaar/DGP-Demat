@@ -4,6 +4,7 @@
     $prenom = Str::of($demande->prenom)->lower()->title()->value();
     $nom = Str::upper($demande->nom);
     $categorie = $demande->categorieSocioprofessionnelle?->libelle;
+    $includeCategory = (bool) ($demande->typeDocument?->champs_requis['categorie_socioprofessionnelle_id'] ?? false);
     $trailingPunctuation = $trailingPunctuation ?? '';
     $includeBirthInfo = $includeBirthInfo ?? false;
 
@@ -11,7 +12,7 @@
         '<span class="nowrap"><strong>M./Mme&nbsp;'.e($prenom).'&nbsp;'.e($nom).'</strong></span>',
     ];
 
-    if ($categorie) {
+    if ($includeCategory && $categorie) {
         $segments[] = e($categorie);
     }
 

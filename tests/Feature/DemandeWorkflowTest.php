@@ -546,6 +546,13 @@ class DemandeWorkflowTest extends TestCase
     public function test_non_engagement_pdf_uses_short_title(): void
     {
         $ane = TypeDocument::where('code', 'ANE')->firstOrFail();
+        $ane->update([
+            'champs_requis' => [
+                'categorie_socioprofessionnelle_id' => false,
+                'date_naissance' => true,
+                'lieu_naissance' => true,
+            ],
+        ]);
         $category = CategorieSocioprofessionnelle::create([
             'libelle' => 'Infirmier breveté spécialisé',
             'code' => 'INFIRMIER_BREVETE_SPECIALISE',
@@ -567,7 +574,8 @@ class DemandeWorkflowTest extends TestCase
         ])->render();
 
         $this->assertStringContainsString('ATTESTATION DE NON ENGAGEMENT', $html);
-        $this->assertStringContainsString('M./Mme&nbsp;Awa&nbsp;DIOP</strong></span>, Infirmier breveté spécialisé, <span class="nowrap">né(e) le&nbsp;12 mai 1990</span> à Dakar Plateau,', $html);
+        $this->assertStringContainsString('M./Mme&nbsp;Awa&nbsp;DIOP</strong></span>, <span class="nowrap">né(e) le&nbsp;12 mai 1990</span> à Dakar Plateau,', $html);
+        $this->assertStringNotContainsString('Infirmier breveté spécialisé', $html);
         $this->assertStringNotContainsString('Dakar Plateau ,', $html);
         $this->assertStringContainsString('n’est ni boursier(ère), ni contractuel(le)', $html);
         $this->assertStringNotContainsString('pension de retraite', $html);
@@ -651,6 +659,35 @@ class DemandeWorkflowTest extends TestCase
         ])->render();
 
         $this->assertStringContainsString('M./Mme&nbsp;Awa&nbsp;DIOP</strong></span>, Sage-Femme maîtresse', $html);
+    }
+
+    public function test_pdf_identity_hides_category_when_type_does_not_require_it(): void
+    {
+        $trv = TypeDocument::where('code', 'TRV')->firstOrFail();
+        $trv->update([
+            'champs_requis' => [
+                'categorie_socioprofessionnelle_id' => false,
+                'date_prise_service' => true,
+            ],
+        ]);
+        $category = CategorieSocioprofessionnelle::create([
+            'libelle' => 'Technicien supérieur de santé',
+            'code' => 'TECHNICIEN_SUPERIEUR_SANTE_TEST',
+            'ordre' => 996,
+        ]);
+        $demande = $this->makeDemande(EtatDemande::VALIDEE, [
+            'type_document_id' => $trv->id,
+            'categorie_socioprofessionnelle_id' => $category->id,
+            'date_prise_service' => '2024-01-01',
+        ]);
+
+        $html = view('demandes.pdf.TRV', [
+            'demande' => $demande->load('agent', 'typeDocument', 'categorieSocioprofessionnelle'),
+            'qrCode' => null,
+        ])->render();
+
+        $this->assertStringContainsString('M./Mme&nbsp;Awa&nbsp;DIOP</strong></span>, <span class="nowrap">contractuel(le),</span>', $html);
+        $this->assertStringNotContainsString('Technicien supérieur de santé', $html);
     }
 
     public function test_etatique_demande_requires_matricule(): void
