@@ -228,7 +228,10 @@ class AdminSettingsTest extends TestCase
             'description' => $ane->description,
             'icone' => $ane->icone,
             'eligibilite' => 'contractuel',
-            'champs_requis' => ['date_depart_retraite' => true],
+            'champs_requis' => [
+                'date_naissance' => true,
+                'lieu_naissance' => true,
+            ],
         ])->assertRedirect(route('settings.type-documents.index'));
 
         $ane->refresh();
@@ -236,7 +239,7 @@ class AdminSettingsTest extends TestCase
         $this->assertSame('ANE', $ane->code);
         $this->assertSame('externe', $ane->eligibilite);
         $this->assertSame([
-            'categorie_socioprofessionnelle_id' => true,
+            'categorie_socioprofessionnelle_id' => false,
             'date_prise_service' => false,
             'date_fin_service' => false,
             'date_depart_retraite' => false,

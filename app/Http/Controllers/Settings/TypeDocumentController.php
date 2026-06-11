@@ -70,7 +70,6 @@ class TypeDocumentController extends Controller
         if ($typeDocument->code === 'ANE') {
             $validated['code'] = 'ANE';
             $validated['eligibilite'] = 'externe';
-            $validated['champs_requis'] = $this->aneRequiredFields();
         }
 
         $typeDocument->update($validated);
@@ -102,21 +101,6 @@ class TypeDocumentController extends Controller
             'date_depart_retraite' => 'Date de départ à la retraite',
             'date_naissance' => 'Date de naissance',
             'lieu_naissance' => 'Lieu de naissance',
-        ];
-    }
-
-    /**
-     * @return array<string, bool>
-     */
-    private function aneRequiredFields(): array
-    {
-        return [
-            'categorie_socioprofessionnelle_id' => true,
-            'date_prise_service' => false,
-            'date_fin_service' => false,
-            'date_depart_retraite' => false,
-            'date_naissance' => true,
-            'lieu_naissance' => true,
         ];
     }
 

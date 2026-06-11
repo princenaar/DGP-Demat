@@ -813,7 +813,13 @@ class DemandeWorkflowTest extends TestCase
         ]);
 
         $type = TypeDocument::where('code', 'ANE')->firstOrFail();
-        $category = CategorieSocioprofessionnelle::firstOrFail();
+        $type->update([
+            'champs_requis' => [
+                'categorie_socioprofessionnelle_id' => false,
+                'date_naissance' => true,
+                'lieu_naissance' => true,
+            ],
+        ]);
 
         $response = $this->post(route('demandes.store'), [
             'type_document_id' => $type->id,
@@ -823,7 +829,6 @@ class DemandeWorkflowTest extends TestCase
             'nin' => '1234567890123',
             'email' => 'awa.diop@example.test',
             'telephone' => '+221 77 123 45 67',
-            'categorie_socioprofessionnelle_id' => $category->id,
             'date_naissance' => '1990-05-12',
             'lieu_naissance' => 'Dakar',
             'g-recaptcha-response' => 'valid-token',
@@ -836,7 +841,7 @@ class DemandeWorkflowTest extends TestCase
             'statut' => 'externe',
             'matricule' => null,
             'structure_id' => null,
-            'categorie_socioprofessionnelle_id' => $category->id,
+            'categorie_socioprofessionnelle_id' => null,
             'date_naissance' => '1990-05-12 00:00:00',
             'lieu_naissance' => 'Dakar',
         ]);
