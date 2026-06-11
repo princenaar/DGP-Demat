@@ -13,18 +13,36 @@ use App\Models\WorkflowTransition;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
 use RuntimeException;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
+use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
 
 class WorkflowEngine
 {
     private const VERIFICATION_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 
+    /**
+     * @var list<string>
+     */
+    private array $warnings = [];
+
     public function __construct(private DemandeValidationRules $validationRules) {}
+
+    /**
+     * @return list<string>
+     */
+    public function pullWarnings(): array
+    {
+        $warnings = $this->warnings;
+        $this->warnings = [];
+
+        return $warnings;
+    }
 
     /**
      * @return Collection<int, WorkflowTransition>
@@ -180,7 +198,16 @@ class WorkflowEngine
             ['demande' => $demande->id]
         );
 
-        Mail::to($demande->email)->send(new DemandeComplementMail($demande, $lien, $commentaireAgent, $validityDays));
+        try {
+            Mail::to($demande->email)->send(new DemandeComplementMail($demande, $lien, $commentaireAgent, $validityDays));
+        } catch (TransportExceptionInterface $e) {
+            $this->enregistrerEchecMail(
+                $demande,
+                'demande_complements',
+                'L’email de demande de compléments n’a pas pu être envoyé. Contactez le demandeur ou renvoyez le lien plus tard.',
+                $e
+            );
+        }
 
         return null;
     }
@@ -195,9 +222,32 @@ class WorkflowEngine
         $demande->fichier_pdf = $pdfPath;
         Storage::disk('local')->put($pdfPath, $pdf);
 
-        Mail::to($demande->email)->send(new DemandeSigneeMail($demande, $pdfPath));
+        try {
+            Mail::to($demande->email)->send(new DemandeSigneeMail($demande, $pdfPath));
+        } catch (TransportExceptionInterface $e) {
+            $this->enregistrerEchecMail(
+                $demande,
+                'demande_signee',
+                'La demande a été signée, mais l’email avec le PDF n’a pas pu être envoyé. Contactez le demandeur ou renvoyez le document plus tard.',
+                $e
+            );
+        }
 
         return null;
+    }
+
+    private function enregistrerEchecMail(Demande $demande, string $action, string $warning, TransportExceptionInterface $exception): void
+    {
+        Log::warning('Échec d’envoi mail de workflow.', [
+            'action' => $action,
+            'demande_id' => $demande->id,
+            'numero_demande' => $demande->numero_affiche,
+            'email' => $demande->email,
+            'exception' => $exception::class,
+            'message' => $exception->getMessage(),
+        ]);
+
+        $this->warnings[] = $warning;
     }
 
     private function genererCodeVerification(): string

@@ -34,4 +34,17 @@ class LayoutPartialsTest extends TestCase
             ->assertSee('Tous droits réservés.')
             ->assertSee('Portail de dématérialisation des actes administratifs.');
     }
+
+    public function test_input_error_component_renders_nested_message_arrays(): void
+    {
+        $this->blade('<x-input-error :messages="$messages" />', [
+            'messages' => [
+                ['Erreur fichier 1'],
+                ['Erreur fichier 2'],
+                ['ignored' => [null]],
+            ],
+        ])
+            ->assertSee('Erreur fichier 1')
+            ->assertSee('Erreur fichier 2');
+    }
 }

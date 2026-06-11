@@ -22,10 +22,12 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
 use Illuminate\View\View;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
+use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
 use Throwable;
 use Yajra\DataTables\Facades\DataTables;
 
@@ -104,7 +106,11 @@ class DemandeController extends Controller
                     'Votre demande a bien été enregistrée sous le numéro '.$demande->numero_affiche.'. Elle est en cours de traitement.'
                 );
             } catch (Throwable $e) {
-                report($e);
+                if ($e instanceof TransportExceptionInterface) {
+                    $this->logMailWarning($demande, 'confirmation_demande', $e);
+                } else {
+                    report($e);
+                }
 
                 return redirect()->route('demandes.create')->with([
                     'success' => $successMessage,
@@ -234,7 +240,7 @@ class DemandeController extends Controller
 
         return redirect()->route('demandes.show', $demande)->with([
             'success' => 'État modifié avec succès.',
-        ]);
+        ] + $this->warningFlash($workflowEngine));
     }
 
     public function imputer(Request $request, Demande $demande, WorkflowEngine $workflowEngine): RedirectResponse
@@ -264,7 +270,7 @@ class DemandeController extends Controller
 
         return redirect()->route('demandes.show', $demande)->with([
             'success' => 'Lien de compléments renvoyé avec succès.',
-        ]);
+        ] + $this->warningFlash($workflowEngine));
     }
 
     /**
@@ -447,5 +453,31 @@ class DemandeController extends Controller
         }
 
         return TypeDocument::whereKey($typeDocumentId)->exists() ? $typeDocumentId : null;
+    }
+
+    /**
+     * @return array{warning?: string}
+     */
+    private function warningFlash(WorkflowEngine $workflowEngine): array
+    {
+        $warnings = $workflowEngine->pullWarnings();
+
+        if ($warnings === []) {
+            return [];
+        }
+
+        return ['warning' => implode(' ', $warnings)];
+    }
+
+    private function logMailWarning(Demande $demande, string $action, TransportExceptionInterface $exception): void
+    {
+        Log::warning('Échec d’envoi mail.', [
+            'action' => $action,
+            'demande_id' => $demande->id,
+            'numero_demande' => $demande->numero_affiche,
+            'email' => $demande->email,
+            'exception' => $exception::class,
+            'message' => $exception->getMessage(),
+        ]);
     }
 }

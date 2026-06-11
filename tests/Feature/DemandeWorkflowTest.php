@@ -26,10 +26,12 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
 use RuntimeException;
+use Symfony\Component\Mailer\Exception\TransportException;
 use Tests\TestCase;
 
 class DemandeWorkflowTest extends TestCase
@@ -363,10 +365,19 @@ class DemandeWorkflowTest extends TestCase
         $structure = Structure::firstOrFail();
         $category = CategorieSocioprofessionnelle::firstOrFail();
 
+        $exception = new TransportException('550 L-RF2 This recipient has been reported recently as out of storage space');
+
         Notification::shouldReceive('send')
             ->once()
             ->withArgs(fn (object $notifiable, object $notification): bool => $notification instanceof DemandeNotification)
-            ->andThrow(new RuntimeException('SMTP indisponible'));
+            ->andThrow($exception);
+        Log::shouldReceive('warning')
+            ->once()
+            ->with('Échec d’envoi mail.', \Mockery::on(
+                fn (array $context): bool => $context['action'] === 'confirmation_demande'
+                    && $context['email'] === 'awa.diop@example.test'
+                    && str_contains($context['message'], '550 L-RF2')
+            ));
 
         $response = $this->post(route('demandes.store'), [
             'type_document_id' => $type->id,
@@ -398,6 +409,27 @@ class DemandeWorkflowTest extends TestCase
             'nom' => 'Diop',
             'prenom' => 'Awa',
             'numero_demande' => $numeroDemande,
+        ]);
+    }
+
+    public function test_public_create_form_renders_nested_file_validation_errors(): void
+    {
+        $response = $this
+            ->followingRedirects()
+            ->from(route('demandes.create'))
+            ->post(route('demandes.store'), $this->validStorePayload([
+                'fichiers' => [
+                    UploadedFile::fake()->create('piece.txt', 1, 'text/plain'),
+                ],
+            ]));
+
+        $response
+            ->assertOk()
+            ->assertSee('Les fichiers doivent être au format PDF, JPG, JPEG ou PNG.');
+
+        $this->assertDatabaseMissing('demandes', [
+            'nom' => 'Ndiaye',
+            'email' => 'fatou.ndiaye@example.test',
         ]);
     }
 
@@ -1247,6 +1279,48 @@ class DemandeWorkflowTest extends TestCase
         Mail::assertSent(DemandeComplementMail::class);
     }
 
+    public function test_complement_transition_is_kept_when_recipient_mailbox_rejects_email(): void
+    {
+        $assignedAgent = User::factory()->create();
+        $assignedAgent->assignRole('AGENT');
+        $demande = $this->makeDemande(EtatDemande::VALIDEE, ['agent_id' => $assignedAgent->id]);
+        $exception = new TransportException('550 L-RF2 This recipient has been reported recently as out of storage space');
+
+        Mail::shouldReceive('to')
+            ->once()
+            ->with($demande->email)
+            ->andReturnSelf();
+        Mail::shouldReceive('send')
+            ->once()
+            ->with(\Mockery::type(DemandeComplementMail::class))
+            ->andThrow($exception);
+        Log::shouldReceive('warning')
+            ->once()
+            ->with('Échec d’envoi mail de workflow.', \Mockery::on(
+                fn (array $context): bool => $context['action'] === 'demande_complements'
+                    && $context['demande_id'] === $demande->id
+                    && $context['email'] === $demande->email
+                    && str_contains($context['message'], '550 L-RF2')
+            ));
+
+        $this->actingAs($assignedAgent)->post(route('demandes.changerEtat', $demande), [
+            'nouvel_etat' => EtatDemande::COMPLEMENTS,
+            'commentaire' => 'Pièces manquantes',
+        ])->assertRedirect(route('demandes.show', $demande))
+            ->assertSessionHas('success', 'État modifié avec succès.')
+            ->assertSessionHas('warning', 'L’email de demande de compléments n’a pas pu être envoyé. Contactez le demandeur ou renvoyez le lien plus tard.');
+
+        $demande->refresh();
+
+        $this->assertSame(EtatDemande::COMPLEMENTS, $demande->etatDemande->nom);
+        $this->assertDatabaseHas('historique_etats', [
+            'demande_id' => $demande->id,
+            'etat_demande_id' => $demande->etat_demande_id,
+            'user_id' => $assignedAgent->id,
+            'commentaire' => 'Pièces manquantes',
+        ]);
+    }
+
     public function test_agent_with_accueil_role_can_request_complements_when_assigned(): void
     {
         Mail::fake();
@@ -1726,6 +1800,55 @@ class DemandeWorkflowTest extends TestCase
         $this->assertSame('demandes_signees/TRV-'.now()->format('Y').'00001.pdf', $demande->fichier_pdf);
         Storage::disk('local')->assertExists($demande->fichier_pdf);
         Mail::assertSent(DemandeSigneeMail::class);
+    }
+
+    public function test_pdf_signature_transition_is_kept_when_recipient_mailbox_rejects_email(): void
+    {
+        Storage::fake('local');
+        $pdf = \Mockery::mock(\Barryvdh\DomPDF\PDF::class);
+        $pdf->shouldReceive('setPaper')->once()->with('A4')->andReturnSelf();
+        $pdf->shouldReceive('output')->once()->andReturn('pdf-content');
+
+        Pdf::shouldReceive('loadView')
+            ->once()
+            ->withArgs(fn (string $view, array $data): bool => $view === 'demandes.pdf.TRV'
+                && $data['demande']->verification_code !== null)
+            ->andReturn($pdf);
+
+        $exception = new TransportException('550 L-RF2 This recipient has been reported recently as out of storage space');
+
+        Mail::shouldReceive('to')
+            ->once()
+            ->with('awa.diop@example.test')
+            ->andReturnSelf();
+        Mail::shouldReceive('send')
+            ->once()
+            ->with(\Mockery::type(DemandeSigneeMail::class))
+            ->andThrow($exception);
+        Log::shouldReceive('warning')
+            ->once()
+            ->with('Échec d’envoi mail de workflow.', \Mockery::on(
+                fn (array $context): bool => $context['action'] === 'demande_signee'
+                    && $context['email'] === 'awa.diop@example.test'
+                    && str_contains($context['message'], '550 L-RF2')
+            ));
+
+        $drh = User::factory()->create();
+        $drh->assignRole('DRH');
+        $demande = $this->makeDemande(EtatDemande::EN_SIGNATURE);
+
+        $this->actingAs($drh)->post(route('demandes.changerEtat', $demande), [
+            'nouvel_etat' => EtatDemande::SIGNEE,
+            'commentaire' => 'Signature validée',
+        ])->assertRedirect(route('demandes.show', $demande))
+            ->assertSessionHas('success', 'État modifié avec succès.')
+            ->assertSessionHas('warning', 'La demande a été signée, mais l’email avec le PDF n’a pas pu être envoyé. Contactez le demandeur ou renvoyez le document plus tard.');
+
+        $demande->refresh();
+
+        $this->assertSame(EtatDemande::SIGNEE, $demande->etatDemande->nom);
+        $this->assertNotNull($demande->verification_code);
+        Storage::disk('local')->assertExists($demande->fichier_pdf);
     }
 
     private function makeDemande(string $etat, array $attributes = []): Demande

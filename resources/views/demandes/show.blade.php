@@ -34,6 +34,12 @@
             </div>
         @endif
 
+        @if(session('warning'))
+            <div class="rounded bg-amber-50 border-l-4 border-amber-400 p-4 text-amber-800 font-medium">
+                {{ session('warning') }}
+            </div>
+        @endif
+
         <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
             <section class="lg:col-span-2 bg-white rounded-lg shadow divide-y divide-gray-100 border border-gray-100">
                 <div class="p-6">
