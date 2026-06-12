@@ -1,8 +1,11 @@
 @extends('layouts.public')
 
 @php
+    use App\Enums\DemandeStatut;
+
     $requiredMark = '<span class="text-red-600" aria-hidden="true">*</span>';
     $oldStructureId = old('structure_id', $demande->structure_id);
+    $oldStatut = DemandeStatut::normalise(old('statut'));
     $datePriseService = old('date_prise_service', optional($demande->date_prise_service)->format('Y-m-d'));
     $dateFinService = old('date_fin_service', optional($demande->date_fin_service)->format('Y-m-d'));
     $dateDepartRetraite = old('date_depart_retraite', optional($demande->date_depart_retraite)->format('Y-m-d'));
@@ -48,8 +51,8 @@
                           champs: @js($demande->typeDocument->champs_requis ?? []),
                           pieces: @js($piecesPayload),
                           typeCode: @js($demande->typeDocument->code),
-                          eligibility: @js($demande->typeDocument->eligibilite),
-                          statut: @js(old('statut', $demande->statut)),
+                          eligibility: @js($demande->typeDocument->eligibilite?->value),
+                          statut: @js($oldStatut ?? $demande->statut?->value),
                           structures: @js($structures->map(fn ($structure) => ['id' => (string) $structure->id, 'nom' => $structure->nom])->values()),
                           structureSearch: '',
                           selectedStructureId: @js((string) $oldStructureId),

@@ -1,16 +1,19 @@
 @extends('layouts.public')
 
 @php
+    use App\Enums\DemandeStatut;
+
     $requiredMark = '<span class="text-red-600" aria-hidden="true">*</span>';
     $oldStructureId = old('structure_id');
     $oldTypeId = old('type_document_id');
+    $oldStatut = DemandeStatut::normalise(old('statut'));
     $usesE2eDatabase = str_ends_with((string) config('database.connections.sqlite.database'), 'e2e.sqlite');
     $usesTestingRecaptcha = app()->environment('testing') || $usesE2eDatabase;
     $typePayload = $types->map(fn ($type) => [
         'id' => (string) $type->id,
         'nom' => $type->nom,
         'code' => $type->code,
-        'eligibilite' => $type->eligibilite,
+        'eligibilite' => $type->eligibilite?->value,
         'description' => $type->description,
         'icone' => $type->icone,
         'champs' => $type->champs_requis ?? [],
@@ -59,7 +62,7 @@
                           types: @js($typePayload),
                           selectedTypeId: @js((string) $oldTypeId),
                           champs: {},
-                          statut: @js(old('statut', '')),
+                          statut: @js($oldStatut ?? ''),
                           structures: @js($structures->map(fn ($structure) => ['id' => (string) $structure->id, 'nom' => $structure->nom])->values()),
                           structureSearch: '',
                           selectedStructureId: @js((string) $oldStructureId),

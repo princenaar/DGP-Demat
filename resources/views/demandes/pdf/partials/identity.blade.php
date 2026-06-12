@@ -1,4 +1,5 @@
 @php
+    use App\Enums\DemandeStatut;
     use Illuminate\Support\Str;
 
     $prenom = Str::of($demande->prenom)->lower()->title()->value();
@@ -21,9 +22,9 @@
         $segments[] = '<span class="nowrap">né(e) le&nbsp;'.e($demande->date_naissance->isoFormat($demande->date_naissance->day == 1 ? 'Do MMMM YYYY' : 'D MMMM YYYY')).'</span> à '.e($lieuNaissance);
     }
 
-    if ($demande->statut === 'contractuel') {
+    if ($demande->statut === DemandeStatut::Contractuel) {
         $segments[] = '<span class="nowrap">contractuel(le)'.e($trailingPunctuation).'</span>';
-    } elseif ($demande->statut === 'étatique') {
+    } elseif ($demande->statut === DemandeStatut::Etatique) {
         $segments[] = 'matricule de solde <strong>n°&nbsp;'.e($demande->matricule).'</strong>'.e($trailingPunctuation);
     } else {
         $segments[count($segments) - 1] .= e($trailingPunctuation);

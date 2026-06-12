@@ -40,7 +40,7 @@ class DemandeValidationRules
     {
         $eligibilite = $demande->typeDocument?->eligibilite;
 
-        return blank($eligibilite) || $demande->statut === $eligibilite;
+        return $eligibilite === null || $demande->statut === $eligibilite;
     }
 
     private function piecesObligatoiresSontPresentes(Demande $demande): bool

@@ -1,4 +1,5 @@
 @php
+    use App\Enums\DemandeStatut;
     use App\Models\EtatDemande;
     use Carbon\Carbon;
 
@@ -74,9 +75,9 @@
                         </div>
                         <div>
                             <dt class="text-sm font-medium text-ink-700">Statut</dt>
-                            <dd class="text-ink-900">{{ $demande->statut ? ucfirst($demande->statut) : 'N/A' }}</dd>
+                            <dd class="text-ink-900">{{ $demande->statut?->label() ?? 'N/A' }}</dd>
                         </div>
-                        @if($demande->statut === 'étatique')
+                        @if($demande->statut === DemandeStatut::Etatique)
                             <div>
                                 <dt class="text-sm font-medium text-ink-700">Matricule</dt>
                                 <dd class="text-ink-900">{{ $demande->matricule ?? 'N/A' }}</dd>

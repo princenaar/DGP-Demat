@@ -64,7 +64,7 @@ return new class extends Migration
                 ->where('id', $aneId)
                 ->update([
                     'code' => 'ANA',
-                    'eligibilite' => 'etatique',
+                    'eligibilite' => 'étatique',
                     'champs_requis' => json_encode([
                         'date_depart_retraite' => true,
                     ], JSON_THROW_ON_ERROR),

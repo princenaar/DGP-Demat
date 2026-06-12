@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\DemandeStatut;
 use App\Mail\DemandeComplementMail;
 use App\Mail\DemandeSigneeMail;
 use App\Models\ApplicationSetting;
@@ -178,6 +179,57 @@ class DemandeWorkflowTest extends TestCase
             'etat_demande_id' => $demande->etat_demande_id,
             'user_id' => null,
             'commentaire' => 'Validation automatique : agent(s) par défaut configuré(s).',
+        ]);
+    }
+
+    public function test_public_store_for_etatique_administrative_type_with_default_agent_is_validated(): void
+    {
+        Mail::fake();
+        Http::fake([
+            'www.google.com/recaptcha/api/siteverify' => Http::response(['success' => true]),
+        ]);
+
+        $agent = User::factory()->create();
+        $agent->assignRole('AGENT');
+        $type = TypeDocument::where('code', 'ADM')->firstOrFail();
+        $type->update(['eligibilite' => DemandeStatut::Etatique]);
+        $type->defaultAgents()->attach($agent);
+        $structure = Structure::firstOrFail();
+        $category = CategorieSocioprofessionnelle::firstOrFail();
+
+        $this->get(route('demandes.create'))
+            ->assertOk()
+            ->assertSee('value="'.DemandeStatut::Etatique->value.'"', false);
+
+        $response = $this->post(route('demandes.store'), [
+            'type_document_id' => $type->id,
+            'nom' => 'Sarr',
+            'prenom' => 'Aminata',
+            'statut' => DemandeStatut::Etatique->value,
+            'matricule' => '123456A',
+            'nin' => '1234567890999',
+            'structure_id' => $structure->id,
+            'email' => 'aminata.sarr@example.test',
+            'telephone' => '+221 77 999 99 99',
+            'categorie_socioprofessionnelle_id' => $category->id,
+            'date_prise_service' => '2024-01-15',
+            'g-recaptcha-response' => 'valid-token',
+        ]);
+
+        $response
+            ->assertRedirect(route('demandes.create'))
+            ->assertSessionHas('success');
+
+        $demande = Demande::where('nin', '1234567890999')->firstOrFail();
+
+        $this->assertSame(DemandeStatut::Etatique, $demande->statut);
+        $this->assertSame(EtatDemande::VALIDEE, $demande->etatDemande->nom);
+        $this->assertNull($demande->agent_id);
+        $this->assertDatabaseHas('demandes', [
+            'id' => $demande->id,
+            'type_document_id' => $type->id,
+            'statut' => DemandeStatut::Etatique->value,
+            'matricule' => '123456A',
         ]);
     }
 

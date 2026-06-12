@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Enums\DemandeStatut;
 use App\Models\Demande;
 use App\Models\TypeDocument;
 use Illuminate\Contracts\Validation\ValidationRule;
@@ -28,6 +29,7 @@ class DemandeStoreRequest extends FormRequest
             'matricule' => Demande::normalizeMatricule($this->input('matricule')),
             'email' => Demande::normalizeEmail((string) $this->input('email')),
             'telephone' => Demande::normalizeTelephone((string) $this->input('telephone')),
+            'statut' => DemandeStatut::normalise($this->input('statut')),
         ]);
     }
 
@@ -43,8 +45,12 @@ class DemandeStoreRequest extends FormRequest
             'nom' => ['required', 'string', 'max:100'],
             'prenom' => ['required', 'string', 'max:100'],
             'nin' => ['required', 'regex:/^[0-9]{13}$/'],
-            'statut' => ['required', 'string', 'in:étatique,contractuel,externe'],
-            'matricule' => ['nullable', 'required_if:statut,étatique', 'regex:/^[0-9]{6}[A-Za-z]$/'],
+            'statut' => ['required', Rule::enum(DemandeStatut::class)],
+            'matricule' => [
+                'nullable',
+                Rule::requiredIf(fn (): bool => $this->input('statut') === DemandeStatut::Etatique->value),
+                'regex:/^[0-9]{6}[A-Za-z]$/',
+            ],
             'structure_id' => [
                 'nullable',
                 Rule::requiredIf(fn (): bool => ! $this->isAne()),
@@ -138,11 +144,11 @@ class DemandeStoreRequest extends FormRequest
     {
         $typeDocument = $this->typeDocument();
 
-        if (! $typeDocument || blank($typeDocument->eligibilite)) {
+        if (! $typeDocument || $typeDocument->eligibilite === null) {
             return;
         }
 
-        if ($this->input('statut') !== $typeDocument->eligibilite) {
+        if ($this->input('statut') !== $typeDocument->eligibilite->value) {
             $validator->errors()->add(
                 'statut',
                 'Le statut sélectionné ne correspond pas à l’éligibilité de ce type de document.'
@@ -152,7 +158,7 @@ class DemandeStoreRequest extends FormRequest
 
     private function validateExternalStatus(Validator $validator): void
     {
-        if ($this->input('statut') === 'externe' && ! $this->isAne()) {
+        if ($this->input('statut') === DemandeStatut::Externe->value && ! $this->isAne()) {
             $validator->errors()->add(
                 'statut',
                 'Le statut externe est réservé à l’attestation de non engagement.'

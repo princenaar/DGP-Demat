@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\DemandeStatut;
 use App\Http\Requests\DemandeStoreRequest;
 use App\Http\Requests\DemandeUpdateRequest;
 use App\Models\ApplicationSetting;
@@ -74,8 +75,8 @@ class DemandeController extends Controller
                 'nom' => $request->nom,
                 'prenom' => $request->prenom,
                 'nin' => $request->nin,
-                'matricule' => $request->statut === 'étatique' ? $request->matricule : null,
-                'structure_id' => $request->statut === 'externe' ? null : $request->structure_id,
+                'matricule' => $request->statut === DemandeStatut::Etatique->value ? $request->matricule : null,
+                'structure_id' => $request->statut === DemandeStatut::Externe->value ? null : $request->structure_id,
                 'email' => $request->email,
                 'telephone' => $request->telephone,
                 'statut' => $request->statut,
@@ -190,7 +191,7 @@ class DemandeController extends Controller
         }
 
         return DataTables::of($query)
-            ->addColumn('statut_label', fn ($demande): string => ucfirst($demande->statut))
+            ->addColumn('statut_label', fn (Demande $demande): string => $demande->statut?->label() ?? '-')
             ->addColumn('etat', function ($demande): string {
                 $etat = $demande->etatDemande?->nom;
                 $label = EtatDemande::labelFor($etat);

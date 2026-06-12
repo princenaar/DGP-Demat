@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\DemandeStatut;
 use App\Models\CategorieSocioprofessionnelle;
 use App\Models\Demande;
 use App\Models\EtatDemande;
@@ -17,6 +18,7 @@ use Database\Seeders\StructureSeeder;
 use Database\Seeders\TypeDocumentSeeder;
 use Database\Seeders\WorkflowTransitionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use SplFileInfo;
 use Tests\TestCase;
@@ -137,7 +139,7 @@ class PhaseOneSchemaTest extends TestCase
             'Attestation de non engagement avec le ministère de la santé',
             TypeDocument::where('code', 'ANE')->value('nom')
         );
-        $this->assertSame('externe', TypeDocument::where('code', 'ANE')->value('eligibilite'));
+        $this->assertSame(DemandeStatut::Externe, TypeDocument::where('code', 'ANE')->value('eligibilite'));
         $this->assertNull(TypeDocument::where('code', 'TRV')->value('eligibilite'));
         $this->assertNotNull(TypeDocument::where('code', 'ADM')->value('description'));
         $admRequiredFields = TypeDocument::where('code', 'ADM')->firstOrFail()->champs_requis;
@@ -159,13 +161,34 @@ class PhaseOneSchemaTest extends TestCase
         $this->assertSame(301, Structure::count());
     }
 
+    public function test_eligibilite_normalization_migration_updates_legacy_etatique_value(): void
+    {
+        $type = TypeDocument::where('code', 'ADM')->firstOrFail();
+
+        DB::table('type_documents')->where('id', $type->id)->update([
+            'eligibilite' => 'etatique',
+        ]);
+
+        $migration = require database_path('migrations/2026_06_12_115232_normalize_type_document_eligibilite_values.php');
+        $migration->up();
+
+        $type->refresh();
+
+        $this->assertSame(DemandeStatut::Etatique, $type->eligibilite);
+        $this->assertDatabaseHas('type_documents', [
+            'id' => $type->id,
+            'eligibilite' => DemandeStatut::Etatique->value,
+        ]);
+    }
+
     public function test_ana_to_ane_migration_preserves_legacy_number_and_clears_external_fields(): void
     {
         $ane = TypeDocument::where('code', 'ANE')->firstOrFail();
-        $ane->update([
+
+        DB::table('type_documents')->where('id', $ane->id)->update([
             'code' => 'ANA',
             'eligibilite' => 'etatique',
-            'champs_requis' => ['date_depart_retraite' => true],
+            'champs_requis' => json_encode(['date_depart_retraite' => true], JSON_THROW_ON_ERROR),
         ]);
 
         $demande = Demande::create([
@@ -193,14 +216,14 @@ class PhaseOneSchemaTest extends TestCase
         $demande->refresh();
 
         $this->assertSame('ANE', $ane->code);
-        $this->assertSame('externe', $ane->eligibilite);
+        $this->assertSame(DemandeStatut::Externe, $ane->eligibilite);
         $this->assertSame([
             'categorie_socioprofessionnelle_id' => true,
             'date_naissance' => true,
             'lieu_naissance' => true,
         ], $ane->champs_requis);
         $this->assertSame('ANA-202600001', $demande->numero_demande);
-        $this->assertSame('externe', $demande->statut);
+        $this->assertSame(DemandeStatut::Externe, $demande->statut);
         $this->assertNull($demande->matricule);
         $this->assertNull($demande->structure_id);
         $this->assertNotNull($demande->categorie_socioprofessionnelle_id);

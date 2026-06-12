@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Enums\DemandeStatut;
 use App\Models\TypeDocument;
 use Illuminate\Database\Seeder;
 
@@ -61,7 +62,7 @@ class TypeDocumentSeeder extends Seeder
                     'date_naissance' => true,
                     'lieu_naissance' => true,
                 ],
-                'eligibilite' => 'externe',
+                'eligibilite' => DemandeStatut::Externe->value,
                 'description' => 'Attestation prouvant que le demandeur est libre de tout engagement.',
                 'icone' => 'shield-check',
             ],

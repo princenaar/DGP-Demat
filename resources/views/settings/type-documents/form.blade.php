@@ -7,7 +7,10 @@
 @section('content')
     @include('settings.partials.nav')
     @php
+        use App\Enums\DemandeStatut;
+
         $isAne = $typeDocument->code === 'ANE';
+        $currentEligibility = DemandeStatut::normalise(old('eligibilite', $typeDocument->eligibilite?->value));
     @endphp
 
     <div class="mb-6 rounded-lg border border-ink-100 bg-white p-6 shadow-sm">
@@ -61,12 +64,12 @@
                 Statut éligible
                 @if($isAne)
                     <input value="Externe" class="mt-1 w-full rounded-md border-gray-300 bg-gray-50" disabled>
-                    <input type="hidden" name="eligibilite" value="externe">
+                    <input type="hidden" name="eligibilite" value="{{ DemandeStatut::Externe->value }}">
                 @else
                     <select name="eligibilite" class="mt-1 w-full rounded-md border-gray-300">
                         <option value="">Tous statuts</option>
-                        <option value="etatique" @selected(in_array(old('eligibilite', $typeDocument->eligibilite), ['etatique', 'étatique'], true))>Étatique</option>
-                        <option value="contractuel" @selected(old('eligibilite', $typeDocument->eligibilite) === 'contractuel')>Contractuel</option>
+                        <option value="{{ DemandeStatut::Etatique->value }}" @selected($currentEligibility === DemandeStatut::Etatique->value)>Étatique</option>
+                        <option value="{{ DemandeStatut::Contractuel->value }}" @selected($currentEligibility === DemandeStatut::Contractuel->value)>Contractuel</option>
                     </select>
                 @endif
                 <span class="mt-1 block text-xs font-normal text-ink-500">Restreint la demande à un statut précis. Laissez vide si le type concerne tout le monde.</span>

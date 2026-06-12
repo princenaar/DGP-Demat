@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Settings;
 
+use App\Enums\DemandeStatut;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Settings\TypeDocumentRequest;
 use App\Models\TypeDocument;
@@ -69,7 +70,7 @@ class TypeDocumentController extends Controller
 
         if ($typeDocument->code === 'ANE') {
             $validated['code'] = 'ANE';
-            $validated['eligibilite'] = 'externe';
+            $validated['eligibilite'] = DemandeStatut::Externe->value;
         }
 
         $typeDocument->update($validated);

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\DemandeStatut;
 use App\Services\DemandeNumeroGenerator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
@@ -59,6 +60,7 @@ class Demande extends Model
     ];
 
     protected $casts = [
+        'statut' => DemandeStatut::class,
         'date_prise_service' => 'datetime',
         'date_fin_service' => 'datetime',
         'date_depart_retraite' => 'datetime',

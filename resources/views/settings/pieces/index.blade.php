@@ -16,7 +16,7 @@
                     Code : <span class="font-semibold text-ink-800">{{ $typeDocument->code ?? 'Non renseigné' }}</span>
                     @if($typeDocument->eligibilite)
                         <span class="mx-2 text-ink-300">|</span>
-                        Éligibilité : <span class="font-semibold text-ink-800">{{ ucfirst($typeDocument->eligibilite) }}</span>
+                        Éligibilité : <span class="font-semibold text-ink-800">{{ $typeDocument->eligibilite->label() }}</span>
                     @endif
                 </p>
                 @if($typeDocument->description)

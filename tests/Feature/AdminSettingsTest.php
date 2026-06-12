@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\DemandeStatut;
 use App\Models\ApplicationSetting;
 use App\Models\CategorieSocioprofessionnelle;
 use App\Models\Demande;
@@ -169,6 +170,43 @@ class AdminSettingsTest extends TestCase
         ]);
     }
 
+    public function test_etatique_type_document_eligibility_is_stored_with_canonical_value(): void
+    {
+        $this->actingAs($this->admin)->post(route('settings.type-documents.store'), [
+            'nom' => 'Document étatique',
+            'code' => 'DET',
+            'description' => 'Description',
+            'icone' => 'file-check',
+            'eligibilite' => DemandeStatut::Etatique->value,
+            'champs_requis' => ['date_prise_service' => true],
+        ])->assertRedirect(route('settings.type-documents.index'));
+
+        $type = TypeDocument::where('code', 'DET')->firstOrFail();
+
+        $this->assertSame(DemandeStatut::Etatique, $type->eligibilite);
+        $this->assertDatabaseHas('type_documents', [
+            'id' => $type->id,
+            'eligibilite' => DemandeStatut::Etatique->value,
+        ]);
+
+        $this->actingAs($this->admin)->put(route('settings.type-documents.update', $type), [
+            'nom' => $type->nom,
+            'code' => $type->code,
+            'description' => $type->description,
+            'icone' => $type->icone,
+            'eligibilite' => 'etatique',
+            'champs_requis' => ['date_prise_service' => true],
+        ])->assertRedirect(route('settings.type-documents.index'));
+
+        $type->refresh();
+
+        $this->assertSame(DemandeStatut::Etatique, $type->eligibilite);
+        $this->assertDatabaseHas('type_documents', [
+            'id' => $type->id,
+            'eligibilite' => DemandeStatut::Etatique->value,
+        ]);
+    }
+
     public function test_workflow_update_only_changes_automatic_flag(): void
     {
         $type = TypeDocument::where('code', 'TRV')->firstOrFail();
@@ -237,7 +275,7 @@ class AdminSettingsTest extends TestCase
         $ane->refresh();
 
         $this->assertSame('ANE', $ane->code);
-        $this->assertSame('externe', $ane->eligibilite);
+        $this->assertSame(DemandeStatut::Externe, $ane->eligibilite);
         $this->assertSame([
             'categorie_socioprofessionnelle_id' => false,
             'date_prise_service' => false,
