@@ -103,7 +103,7 @@
                               return Boolean(this.selectedType?.eligibilite);
                           },
                           visible(champ) {
-                              return Object.prototype.hasOwnProperty.call(this.champs, champ);
+                              return Boolean(this.champs[champ]);
                           },
                           required(champ) {
                               return Boolean(this.champs[champ]);

@@ -117,7 +117,7 @@ class AdminSettingsTest extends TestCase
 
         $type = TypeDocument::where('code', 'AUT')->firstOrFail();
         $this->assertTrue($type->defaultAgents->first()->is($agent));
-        $this->assertTrue($type->champs_requis['date_prise_service']);
+        $this->assertSame(['date_prise_service' => true], $type->champs_requis);
 
         $this->get(route('settings.type-documents.pieces.index', $type))
             ->assertOk()
@@ -207,6 +207,35 @@ class AdminSettingsTest extends TestCase
         ]);
     }
 
+    public function test_unchecked_type_document_fields_are_not_persisted_as_false_flags(): void
+    {
+        $this->actingAs($this->admin)->post(route('settings.type-documents.store'), [
+            'nom' => 'Document sans champs',
+            'code' => 'DSC',
+            'description' => 'Description',
+            'icone' => 'file-check',
+            'eligibilite' => null,
+            'champs_requis' => [
+                'date_prise_service' => '1',
+                'date_fin_service' => '0',
+            ],
+        ])->assertRedirect(route('settings.type-documents.index'));
+
+        $type = TypeDocument::where('code', 'DSC')->firstOrFail();
+
+        $this->assertSame(['date_prise_service' => true], $type->champs_requis);
+
+        $this->actingAs($this->admin)->put(route('settings.type-documents.update', $type), [
+            'nom' => $type->nom,
+            'code' => $type->code,
+            'description' => $type->description,
+            'icone' => $type->icone,
+            'eligibilite' => null,
+        ])->assertRedirect(route('settings.type-documents.index'));
+
+        $this->assertSame([], $type->fresh()->champs_requis);
+    }
+
     public function test_workflow_update_only_changes_automatic_flag(): void
     {
         $type = TypeDocument::where('code', 'TRV')->firstOrFail();
@@ -277,10 +306,6 @@ class AdminSettingsTest extends TestCase
         $this->assertSame('ANE', $ane->code);
         $this->assertSame(DemandeStatut::Externe, $ane->eligibilite);
         $this->assertSame([
-            'categorie_socioprofessionnelle_id' => false,
-            'date_prise_service' => false,
-            'date_fin_service' => false,
-            'date_depart_retraite' => false,
             'date_naissance' => true,
             'lieu_naissance' => true,
         ], $ane->champs_requis);

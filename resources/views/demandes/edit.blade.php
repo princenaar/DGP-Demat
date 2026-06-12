@@ -77,7 +77,7 @@
                               return selected ? selected.nom : '';
                           },
                           visible(champ) {
-                              return Object.prototype.hasOwnProperty.call(this.champs, champ);
+                              return Boolean(this.champs[champ]);
                           },
                           required(champ) {
                               return Boolean(this.champs[champ]);

@@ -113,7 +113,8 @@ class TypeDocumentController extends Controller
     {
         return collect($this->configurableFields())
             ->keys()
-            ->mapWithKeys(fn (string $field): array => [$field => (bool) ($fields[$field] ?? false)])
+            ->filter(fn (string $field): bool => (bool) ($fields[$field] ?? false))
+            ->mapWithKeys(fn (string $field): array => [$field => true])
             ->all();
     }
 
