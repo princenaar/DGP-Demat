@@ -25,6 +25,41 @@
         </a>
     </div>
 
+    <section class="mt-6 rounded-lg border {{ $sequenceAnomaliesCount > 0 ? 'border-amber-300 bg-amber-50' : 'border-green-300 bg-green-50' }} p-6 shadow-sm">
+        <div class="max-w-2xl">
+            <h2 class="text-lg font-semibold text-ink-900">Séquences des demandes</h2>
+
+            @if($sequenceAnomaliesCount > 0)
+                <p class="mt-2 text-sm text-amber-900">
+                    {{ $sequenceAnomaliesCount }} compteur(s) absent(s) ou en retard ont été détecté(s).
+                    La resynchronisation les positionnera après le dernier numéro utilisé sans jamais diminuer un compteur.
+                </p>
+
+                <form
+                    method="POST"
+                    action="{{ route('settings.sequences.resynchronize') }}"
+                    class="mt-5"
+                    x-data="{ submitting: false }"
+                    x-on:submit="if (submitting) { $event.preventDefault(); } else { submitting = true; }"
+                >
+                    @csrf
+                    <button
+                        type="submit"
+                        class="rounded-md bg-senegal-green px-4 py-2 text-sm font-semibold text-white hover:bg-green-800 disabled:cursor-not-allowed disabled:opacity-60"
+                        x-bind:disabled="submitting"
+                        x-text="submitting ? 'Resynchronisation en cours…' : 'Resynchroniser les séquences'"
+                    >
+                        Resynchroniser les séquences
+                    </button>
+                </form>
+            @else
+                <p class="mt-2 text-sm text-green-800">
+                    Toutes les séquences sont synchronisées avec les numéros de demandes enregistrés.
+                </p>
+            @endif
+        </div>
+    </section>
+
     <section class="mt-6 rounded-lg border border-ink-100 bg-white p-6 shadow-sm">
         <div class="max-w-xl">
             <h2 class="text-lg font-semibold text-ink-900">Liens de compléments</h2>

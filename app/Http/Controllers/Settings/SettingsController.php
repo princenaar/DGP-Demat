@@ -11,11 +11,12 @@ use App\Models\Structure;
 use App\Models\TypeDocument;
 use App\Models\User;
 use App\Models\WorkflowTransition;
+use App\Services\DemandeSequenceSynchronizer;
 use Illuminate\View\View;
 
 class SettingsController extends Controller
 {
-    public function __invoke(): View
+    public function __invoke(DemandeSequenceSynchronizer $sequenceSynchronizer): View
     {
         return view('settings.index', [
             'typeDocumentsCount' => TypeDocument::count(),
@@ -27,6 +28,7 @@ class SettingsController extends Controller
             'usersCount' => User::count(),
             'inactiveUsersCount' => User::where('is_active', false)->count(),
             'complementLinkValidityDays' => ApplicationSetting::complementLinkValidityDays(),
+            'sequenceAnomaliesCount' => $sequenceSynchronizer->anomalies()->count(),
         ]);
     }
 }

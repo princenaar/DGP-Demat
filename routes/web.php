@@ -5,6 +5,7 @@ use App\Http\Controllers\DemandeController;
 use App\Http\Controllers\JustificatifController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Settings\ApplicationSettingsController;
+use App\Http\Controllers\Settings\DemandeSequenceController;
 use App\Http\Controllers\Settings\PieceRequiseController;
 use App\Http\Controllers\Settings\ReferentielController;
 use App\Http\Controllers\Settings\SettingsController;
@@ -58,6 +59,7 @@ Route::middleware(['auth', 'verified', 'role:ADMIN'])->group(function () {
 
     Route::get('/parametres', SettingsController::class)->name('settings.index');
     Route::put('/parametres/application', [ApplicationSettingsController::class, 'update'])->name('settings.application.update');
+    Route::post('/parametres/sequences/resynchroniser', DemandeSequenceController::class)->name('settings.sequences.resynchronize');
     Route::resource('/parametres/types-demandes', TypeDocumentController::class)
         ->parameters(['types-demandes' => 'typeDocument'])
         ->names('settings.type-documents');

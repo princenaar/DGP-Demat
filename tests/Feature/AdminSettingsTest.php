@@ -10,6 +10,7 @@ use App\Models\EtatDemande;
 use App\Models\Structure;
 use App\Models\TypeDocument;
 use App\Models\User;
+use App\Services\DemandeSequenceSynchronizer;
 use Database\Seeders\CategorieSocioprofessionnelleSeeder;
 use Database\Seeders\EtatDemandeSeeder;
 use Database\Seeders\RolesAndPermissionsSeeder;
@@ -18,6 +19,7 @@ use Database\Seeders\TypeDocumentSeeder;
 use Database\Seeders\WorkflowTransitionSeeder;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Password;
 use Tests\TestCase;
@@ -90,6 +92,136 @@ class AdminSettingsTest extends TestCase
         ])->assertForbidden();
 
         $this->assertSame(3, ApplicationSetting::complementLinkValidityDays());
+    }
+
+    public function test_settings_display_sequence_status_and_conditional_resynchronization_button(): void
+    {
+        $this->actingAs($this->admin)->get(route('settings.index'))
+            ->assertOk()
+            ->assertSee('Toutes les séquences sont synchronisées')
+            ->assertDontSee('Resynchroniser les séquences');
+
+        $type = TypeDocument::where('code', 'ADM')->firstOrFail();
+        $this->insertImportedDemande($type, 2026, 7);
+
+        $this->get(route('settings.index'))
+            ->assertOk()
+            ->assertSee('1 compteur(s) absent(s) ou en retard')
+            ->assertSee('Resynchroniser les séquences');
+    }
+
+    public function test_sequence_synchronizer_detects_missing_and_lagging_counters(): void
+    {
+        $adm = TypeDocument::where('code', 'ADM')->firstOrFail();
+        $trv = TypeDocument::where('code', 'TRV')->firstOrFail();
+
+        $this->insertImportedDemande($adm, 2025, 4);
+        $this->insertImportedDemande($trv, 2026, 3);
+        $this->insertSequence($trv, 2026, 3);
+
+        $anomalies = app(DemandeSequenceSynchronizer::class)->anomalies();
+
+        $this->assertCount(2, $anomalies);
+        $this->assertSame([
+            [$adm->id, 2025, 4, null],
+            [$trv->id, 2026, 3, 3],
+        ], $anomalies
+            ->map(fn (array $anomalie): array => [
+                $anomalie['type_document_id'],
+                $anomalie['annee'],
+                $anomalie['maximum_utilise'],
+                $anomalie['prochain_numero'],
+            ])
+            ->values()
+            ->all());
+    }
+
+    public function test_admin_can_resynchronize_all_sequences_without_decreasing_advanced_counters(): void
+    {
+        $adm = TypeDocument::where('code', 'ADM')->firstOrFail();
+        $trv = TypeDocument::where('code', 'TRV')->firstOrFail();
+        $afm = TypeDocument::where('code', 'AFM')->firstOrFail();
+
+        $this->insertImportedDemande($adm, 2025, 4);
+        $this->insertImportedDemande($trv, 2026, 7);
+        $this->insertSequence($trv, 2026, 7);
+        $this->insertImportedDemande($afm, 2026, 3);
+        $this->insertSequence($afm, 2026, 10);
+
+        $this->actingAs($this->admin)
+            ->post(route('settings.sequences.resynchronize'))
+            ->assertRedirect(route('settings.index'))
+            ->assertSessionHas('status', '2 compteurs de demandes ont été resynchronisés.');
+
+        $this->assertDatabaseHas('demande_sequences', [
+            'type_document_id' => $adm->id,
+            'annee' => 2025,
+            'prochain_numero' => 5,
+        ]);
+        $this->assertDatabaseHas('demande_sequences', [
+            'type_document_id' => $trv->id,
+            'annee' => 2026,
+            'prochain_numero' => 8,
+        ]);
+        $this->assertDatabaseHas('demande_sequences', [
+            'type_document_id' => $afm->id,
+            'annee' => 2026,
+            'prochain_numero' => 10,
+        ]);
+
+        $this->post(route('settings.sequences.resynchronize'))
+            ->assertRedirect(route('settings.index'))
+            ->assertSessionHas('status', 'Les séquences étaient déjà synchronisées.');
+
+        $this->assertSame(10, (int) DB::table('demande_sequences')
+            ->where('type_document_id', $afm->id)
+            ->where('annee', 2026)
+            ->value('prochain_numero'));
+    }
+
+    public function test_new_demande_uses_the_next_available_number_after_resynchronization(): void
+    {
+        $type = TypeDocument::where('code', 'ADM')->firstOrFail();
+        $annee = (int) now()->format('Y');
+
+        $this->insertImportedDemande($type, $annee, 7);
+
+        $this->actingAs($this->admin)
+            ->post(route('settings.sequences.resynchronize'))
+            ->assertSessionHasNoErrors();
+
+        $demande = Demande::create([
+            'type_document_id' => $type->id,
+            'structure_id' => Structure::value('id'),
+            'etat_demande_id' => EtatDemande::where('nom', EtatDemande::EN_ATTENTE)->value('id'),
+            'categorie_socioprofessionnelle_id' => CategorieSocioprofessionnelle::value('id'),
+            'nom' => 'Ndiaye',
+            'prenom' => 'Fatou',
+            'email' => 'fatou.ndiaye@example.test',
+            'telephone' => '771234568',
+            'statut' => 'contractuel',
+            'nin' => '1234567890124',
+            'date_prise_service' => '2024-01-15',
+        ]);
+
+        $this->assertSame("ADM-{$annee}00008", $demande->numero_demande);
+        $this->assertSame(8, $demande->numero_sequence);
+    }
+
+    public function test_non_admin_cannot_resynchronize_sequences(): void
+    {
+        $type = TypeDocument::where('code', 'ADM')->firstOrFail();
+        $this->insertImportedDemande($type, 2026, 7);
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->post(route('settings.sequences.resynchronize'))
+            ->assertForbidden();
+
+        $this->assertDatabaseMissing('demande_sequences', [
+            'type_document_id' => $type->id,
+            'annee' => 2026,
+        ]);
     }
 
     public function test_admin_can_manage_type_document_piece_and_workflow(): void
@@ -556,5 +688,41 @@ class AdminSettingsTest extends TestCase
             ->assertOk()
             ->assertDontSee('inactive@example.test')
             ->assertDontSee($agent->name);
+    }
+
+    private function insertImportedDemande(TypeDocument $typeDocument, int $annee, int $sequence): void
+    {
+        DB::table('demandes')->insert([
+            'numero_demande' => sprintf('%s-%d%05d', $typeDocument->code, $annee, $sequence),
+            'numero_annee' => $annee,
+            'numero_sequence' => $sequence,
+            'type_document_id' => $typeDocument->id,
+            'structure_id' => Structure::value('id'),
+            'etat_demande_id' => EtatDemande::where('nom', EtatDemande::EN_ATTENTE)->value('id'),
+            'categorie_socioprofessionnelle_id' => CategorieSocioprofessionnelle::value('id'),
+            'nom' => 'Import',
+            'prenom' => $typeDocument->code,
+            'email' => strtolower($typeDocument->code).".{$annee}.{$sequence}@example.test",
+            'telephone' => null,
+            'statut' => 'contractuel',
+            'matricule' => null,
+            'nin' => sprintf('%013d', ($typeDocument->id * 100000) + $annee + $sequence),
+            'created_at' => "{$annee}-01-01 00:00:00",
+            'updated_at' => "{$annee}-01-01 00:00:00",
+        ]);
+    }
+
+    private function insertSequence(
+        TypeDocument $typeDocument,
+        int $annee,
+        int $prochainNumero
+    ): void {
+        DB::table('demande_sequences')->insert([
+            'type_document_id' => $typeDocument->id,
+            'annee' => $annee,
+            'prochain_numero' => $prochainNumero,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
     }
 }
